@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Build outputs (if any)
+dist/
+build/
+
+# Prisma generated files (custom output directory)
+generated/
+
+# Sometimes Prisma may create nested generated folders—ignore them too
+**/generated/
+
+# Prisma default output folders (safe to ignore even if unused)
+prisma/generated/
+prisma/src/generated/
+**/prisma/generated/
+**/prisma/src/generated/
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
