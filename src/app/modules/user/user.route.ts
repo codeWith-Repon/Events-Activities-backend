@@ -21,10 +21,17 @@ router.get(
 );
 
 router.get(
-    "/:userId",
+    "/me",
     checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
+    UserController.getMe
+);
+
+router.get(
+    "/:userId",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
     UserController.getUserById
 );
+
 
 router.patch(
     "/",

@@ -7,6 +7,7 @@ import { envVars } from "../../config/env"
 import { User } from "../../../generated/prisma/client"
 import { sanitizeUser } from "../../helpers/sanitizeUser"
 import { deleteImageFromCloudinary } from "../../config/cloudinary.config"
+import { JwtPayload } from "jsonwebtoken"
 
 const createUser = async (payload: CreateUserInput) => {
     const existingUser = await prisma.user.findUnique({
@@ -50,10 +51,10 @@ const getUserById = async (id: string) => {
     return result
 }
 
-const updateUser = async (id: string, payload: User) => {
+const updateUser = async (payload: User, decodedToken: JwtPayload) => {
     const isUserExist = await prisma.user.findUnique({
         where: {
-            id
+            id: decodedToken.userId
         }
     })
 
@@ -67,7 +68,7 @@ const updateUser = async (id: string, payload: User) => {
 
     const updatedUser = await prisma.user.update({
         where: {
-            id
+            id: decodedToken.userId
         },
         data: payload
     })
@@ -76,9 +77,23 @@ const updateUser = async (id: string, payload: User) => {
     return result
 }
 
+const getMe = async (decodedToken: JwtPayload) => {
+
+    const result = await prisma.user.findUniqueOrThrow({
+        where: {
+            id: decodedToken.userId
+        }
+    })
+
+    const user = sanitizeUser(result, ["password"])
+
+    return user
+}
+
 export const UserService = {
     createUser,
     getAllUsers,
     getUserById,
-    updateUser
+    updateUser,
+    getMe
 }

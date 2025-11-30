@@ -44,12 +44,11 @@ const getUserById = catchAsync(
 
 const updateUser = catchAsync(
     async (req: Request, res: Response) => {
-        const { userId } = req.params
         const payload: User = {
             ...req.body,
             profileImage: req.file ? req.file?.path : undefined
         }
-        const result = await UserService.updateUser(userId as string, payload)
+        const result = await UserService.updateUser(payload, req.user)
         sendResponse(res, {
             statusCode: status.OK,
             success: true,
@@ -59,9 +58,23 @@ const updateUser = catchAsync(
     }
 )
 
+const getMe = catchAsync(
+    async (req: Request, res: Response) => {
+
+        const result = await UserService.getMe(req.user)
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User profile fetched successfully",
+            data: result
+        })
+    }
+)
+
 export const UserController = {
     createUser,
     getAllUsers,
     getUserById,
-    updateUser
+    updateUser,
+    getMe
 }
