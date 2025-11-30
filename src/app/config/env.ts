@@ -12,6 +12,10 @@ interface EnvConfig {
         CLOUDINARY_API_KEY: string,
         CLOUDINARY_API_SECRET: string
     },
+    JWT_ACCESS_SECRET: string,
+    JWT_ACCESS_EXPIRES: string,
+    JWT_REFRESH_SECRET: string,
+    JWT_REFRESH_EXPIRES: string,
 }
 
 const loadEnvVariable = (): EnvConfig => {
@@ -23,6 +27,10 @@ const loadEnvVariable = (): EnvConfig => {
         "CLOUDINARY_CLOUD_NAME",
         "CLOUDINARY_API_KEY",
         "CLOUDINARY_API_SECRET",
+        "JWT_ACCESS_SECRET",
+        "JWT_ACCESS_EXPIRES",
+        "JWT_REFRESH_SECRET",
+        "JWT_REFRESH_EXPIRES",
     ];
     requiredEnvVariables.forEach(key => {
         if (!process.env[key]) {
@@ -39,7 +47,11 @@ const loadEnvVariable = (): EnvConfig => {
             CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME!,
             CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY!,
             CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET!,
-        }
+        },
+        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET!,
+        JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES!,
+        JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
+        JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES!,
     }
 }
 
