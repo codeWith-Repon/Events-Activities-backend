@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { envVars } from "../config/env";
-import { ZodError } from "zod";
+import { file, ZodError } from "zod";
 import AppError from "../errorHelpers/AppError";
+import { deleteImageFromCloudinary } from "../config/cloudinary.config";
 
 export interface TErrorSources {
     path: string,
@@ -22,6 +23,15 @@ export const globalErrorHandler = async (err: any, req: Request, res: Response, 
 
     if (envVars.NODE_ENV === "development") {
         console.error("🔥 Global Error:", err);
+    }
+
+    if (req.file) {
+        await deleteImageFromCloudinary(req.file.path)
+    }
+
+    if (req.files && Array.isArray(req.files) && req.files.length) {
+        const imagesUrls = req.files.map(file => file.path)
+        await Promise.all(imagesUrls.map(url => deleteImageFromCloudinary(url)))
     }
 
     // ================================

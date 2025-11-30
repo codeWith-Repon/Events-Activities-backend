@@ -47,7 +47,7 @@ const updateUser = catchAsync(
         const { userId } = req.params
         const payload: User = {
             ...req.body,
-            profileImage: req.file?.path || ""
+            profileImage: req.file ? req.file?.path : undefined
         }
         const result = await UserService.updateUser(userId as string, payload)
         sendResponse(res, {

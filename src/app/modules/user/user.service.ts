@@ -6,6 +6,7 @@ import bcryptjs from "bcryptjs"
 import { envVars } from "../../config/env"
 import { User } from "../../../generated/prisma/client"
 import { sanitizeUser } from "../../helpers/sanitizeUser"
+import { deleteImageFromCloudinary } from "../../config/cloudinary.config"
 
 const createUser = async (payload: CreateUserInput) => {
     const existingUser = await prisma.user.findUnique({
@@ -58,6 +59,10 @@ const updateUser = async (id: string, payload: User) => {
 
     if (!isUserExist) {
         throw new AppError(status.NOT_FOUND, "User not found")
+    }
+
+    if (payload.profileImage && isUserExist.profileImage) {
+        await deleteImageFromCloudinary(isUserExist.profileImage)
     }
 
     const updatedUser = await prisma.user.update({
