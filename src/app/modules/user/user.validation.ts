@@ -11,8 +11,6 @@ export const updateUserSchema = z.object({
 
     email: z.email().optional(),
 
-    password: z.string().min(6).optional(),
-
     gender: z.enum(["MALE", "FEMALE"]).optional(),
 
     dob: z.string().datetime().optional(),
@@ -24,10 +22,6 @@ export const updateUserSchema = z.object({
     bio: z.string().optional(),
 
     profileImage: z.url().optional(),
-
-    role: z.enum(["SUPER_ADMIN", "ADMIN", "USER", "HOST"]).optional(),
-
-    status: z.enum(["ACTIVE", "INACTIVE", "BLOCKED"]).optional(),
 });
 
 export const userValidation = {

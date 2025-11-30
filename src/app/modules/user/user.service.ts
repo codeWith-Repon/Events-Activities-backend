@@ -4,6 +4,7 @@ import { CreateUserInput } from "./user.interface"
 import status from "http-status"
 import bcryptjs from "bcryptjs"
 import { envVars } from "../../config/env"
+import { User } from "../../../generated/prisma/client"
 
 const createUser = async (payload: CreateUserInput) => {
     const existingUser = await prisma.user.findUnique({
@@ -29,7 +30,45 @@ const createUser = async (payload: CreateUserInput) => {
     return softData
 }
 
+const getAllUsers = async () => {
+    const result = await prisma.user.findMany()
+    return result
+}
+
+const getUserById = async (id: string) => {
+    const result = await prisma.user.findUniqueOrThrow({
+        where: {
+            id
+        }
+    })
+
+    return result
+}
+
+const updateUser = async (id: string, payload: User) => {
+    const isUserExist = await prisma.user.findUnique({
+        where: {
+            id
+        }
+    })
+
+    if (!isUserExist) {
+        throw new AppError(status.NOT_FOUND, "User not found")
+    }
+
+    const result = await prisma.user.update({
+        where: {
+            id
+        },
+        data: payload
+    })
+
+    return result
+}
 
 export const UserService = {
-    createUser
+    createUser,
+    getAllUsers,
+    getUserById,
+    updateUser
 }

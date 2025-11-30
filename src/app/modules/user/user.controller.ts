@@ -16,6 +16,47 @@ const createUser = catchAsync(
     }
 )
 
+const getAllUsers = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await UserService.getAllUsers()
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User retrieved successfully",
+            data: result
+        })
+    }
+)
+
+const getUserById = catchAsync(
+    async (req: Request, res: Response) => {
+        const { userId } = req.params
+        const result = await UserService.getUserById(userId as string)
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User retrieved successfully",
+            data: result
+        })
+    }
+)
+
+const updateUser = catchAsync(
+    async (req: Request, res: Response) => {
+        const { userId } = req.params
+        const result = await UserService.updateUser(userId as string, req.body)
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User updated successfully",
+            data: result
+        })
+    }
+)
+
 export const UserController = {
-    createUser
+    createUser,
+    getAllUsers,
+    getUserById,
+    updateUser
 }
