@@ -13,7 +13,7 @@ export const updateUserSchema = z.object({
 
     gender: z.enum(["MALE", "FEMALE"]).optional(),
 
-    dob: z.string().datetime().optional(),
+    dob: z.coerce.date().optional(),
 
     address: z.string().min(3).optional(),
 
