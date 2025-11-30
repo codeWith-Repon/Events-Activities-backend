@@ -1,6 +1,7 @@
 import { Server } from 'http'
 import app from './app'
 import { prisma } from './lib/prisma';
+import { seedSuperAdmin } from './app/utils/seedSuperAdmin';
 
 
 let server: Server;
@@ -25,7 +26,10 @@ const startServer = async () => {
     }
 };
 
-startServer()
+(async () => {
+    await startServer();
+    await seedSuperAdmin()
+})()
 
 // Unhandled Promise Rejection
 process.on("unhandledRejection", (error) => {
