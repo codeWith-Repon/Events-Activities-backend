@@ -5,6 +5,7 @@ import status from "http-status"
 import bcryptjs from "bcryptjs"
 import { envVars } from "../../config/env"
 import { User } from "../../../generated/prisma/client"
+import { sanitizeUser } from "../../helpers/sanitizeUser"
 
 const createUser = async (payload: CreateUserInput) => {
     const existingUser = await prisma.user.findUnique({
@@ -26,22 +27,25 @@ const createUser = async (payload: CreateUserInput) => {
             password: hashedPassword
         }
     })
-    const { password, ...softData } = result
-    return softData
+    const safeUser = sanitizeUser(result, ["password"])
+
+    return safeUser
 }
 
 const getAllUsers = async () => {
-    const result = await prisma.user.findMany()
+    const users = await prisma.user.findMany()
+    const result = users.map((user) => sanitizeUser(user, ["password"]))
     return result
 }
 
 const getUserById = async (id: string) => {
-    const result = await prisma.user.findUniqueOrThrow({
+    const user = await prisma.user.findUniqueOrThrow({
         where: {
             id
         }
     })
 
+    const result = sanitizeUser(user, ["password"])
     return result
 }
 
@@ -56,13 +60,14 @@ const updateUser = async (id: string, payload: User) => {
         throw new AppError(status.NOT_FOUND, "User not found")
     }
 
-    const result = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
         where: {
             id
         },
         data: payload
     })
 
+    const result = sanitizeUser(updatedUser, ["password"])
     return result
 }
 

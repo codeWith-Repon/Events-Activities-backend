@@ -3,6 +3,7 @@ import { UserService } from "./user.service";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
+import { User } from "../../../generated/prisma/client";
 
 const createUser = catchAsync(
     async (req: Request, res: Response) => {
@@ -44,7 +45,11 @@ const getUserById = catchAsync(
 const updateUser = catchAsync(
     async (req: Request, res: Response) => {
         const { userId } = req.params
-        const result = await UserService.updateUser(userId as string, req.body)
+        const payload: User = {
+            ...req.body,
+            profileImage: req.file?.path || ""
+        }
+        const result = await UserService.updateUser(userId as string, payload)
         sendResponse(res, {
             statusCode: status.OK,
             success: true,
