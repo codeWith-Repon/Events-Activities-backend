@@ -22,11 +22,13 @@ router.get(
 
 router.get(
     "/:userId",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
     UserController.getUserById
 );
 
 router.patch(
-    "/:userId",
+    "/",
+    checkAuth(UserRole.USER, UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),
     multerUpload.single("file"),
     validateRequest(updateUserSchema),
     UserController.updateUser
