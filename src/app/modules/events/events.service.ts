@@ -1,11 +1,13 @@
 import { JwtPayload } from "jsonwebtoken"
 import { prisma } from "../../../lib/prisma";
-import { Event, User, UserRole } from "../../../generated/prisma/client";
+import { Event, Prisma, User, UserRole } from "../../../generated/prisma/client";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { generateSlug } from "../../utils/generateSlug";
 import { deleteImageFromCloudinary } from "../../config/cloudinary.config";
 import { TUpdateEvent } from "./events.interface";
+import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
+import { eventSearchableFields } from "./events.constant";
 
 const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
@@ -78,14 +80,65 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
     })
 }
 
-const getAllEvents = async () => {
+const getAllEvents = async (filters: any, options: IOptions) => {
+    const { page, limit, skip, sortBy, sortOrder } = PaginationHelpers.calculatePagination(options)
+    const { searchTerm, ...filterData } = filters
+
+    const andConditions: Prisma.EventWhereInput[] = []
+
+    if (searchTerm) {
+        andConditions.push({
+            OR: eventSearchableFields.map((field) => ({
+                [field]: {
+                    contains: searchTerm,
+                    mode: "insensitive"
+                }
+            }))
+        })
+    }
+
+    if (Object.keys(filterData).length > 0) {
+        const filterConditions = Object.keys(filterData).map((key) => {
+            return {
+                [key]: {
+                    equals: filterData[key]
+                }
+            }
+        })
+        andConditions.push({
+            AND: filterConditions
+        })
+    }
+
+    const whereConditions: Prisma.EventWhereInput = andConditions.length > 0 ? { AND: andConditions } : {}
+
     const events = await prisma.event.findMany({
+        where: whereConditions,
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder
+        },
         include: {
             host: true
         }
     })
 
-    return events
+    const total = await prisma.event.count({
+        where: whereConditions
+    })
+
+    const totalPage = Math.ceil(total / limit)
+
+    return {
+        meta: {
+            page,
+            limit,
+            totalPage,
+            total
+        },
+        data: events
+    }
 }
 
 const getEventBySlug = async (slug: string) => {
@@ -211,10 +264,22 @@ const deleteEvent = async (slug: string, decodedToken: JwtPayload) => {
 }
 
 
+const getAllEventsCategory = async () => {
+    const events = await prisma.event.findMany({
+        distinct: ["category"],
+        select: {
+            category: true
+        }
+    })
+
+    return events.map(e => e.category)
+}
+
 export const EventsService = {
     createEvent,
     getAllEvents,
     getEventBySlug,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    getAllEventsCategory
 }

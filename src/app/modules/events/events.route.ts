@@ -22,6 +22,11 @@ router.get(
     EventsController.getAllEvents
 )
 
+router.get(
+    "/category",
+    EventsController.getAllEventsCategory
+)
+
 router.patch(
     "/update/:slug",
     checkAuth(UserRole.USER, UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),

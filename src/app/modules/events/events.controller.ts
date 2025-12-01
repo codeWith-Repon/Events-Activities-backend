@@ -3,6 +3,9 @@ import { catchAsync } from "../../utils/catchAsync"
 import { EventsService } from "./events.service"
 import { sendResponse } from "../../utils/sendResponse"
 import status from "http-status"
+import pick from "../../helpers/pick"
+import { eventFilterableFields } from "./events.constant"
+import { meta } from "zod/v4/core"
 
 
 const createEvent = catchAsync(
@@ -23,13 +26,18 @@ const createEvent = catchAsync(
 
 const getAllEvents = catchAsync(
     async (req: Request, res: Response) => {
+        const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+        const filter = pick(req.query, eventFilterableFields);
 
-        const result = await EventsService.getAllEvents()
+        const result = await EventsService.getAllEvents(filter, options)
         sendResponse(res, {
             statusCode: status.OK,
             success: true,
             message: "Events retrieved successfully",
-            data: result
+            data: {
+                meta: result.meta,
+                data: result.data
+            }
         })
     }
 )
@@ -76,11 +84,23 @@ const deleteEvent = catchAsync(
     }
 )
 
+const getAllEventsCategory = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await EventsService.getAllEventsCategory()
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "Category retrieved successfully.",
+            data: result
+        })
+    }
+)
 
 export const EventsController = {
     createEvent,
     getAllEvents,
     getEventBySlug,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    getAllEventsCategory
 }
