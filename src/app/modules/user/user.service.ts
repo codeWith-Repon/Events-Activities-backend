@@ -4,10 +4,12 @@ import { CreateUserInput } from "./user.interface"
 import status from "http-status"
 import bcryptjs from "bcryptjs"
 import { envVars } from "../../config/env"
-import { User } from "../../../generated/prisma/client"
+import { Prisma, User } from "../../../generated/prisma/client"
 import { sanitizeUser } from "../../helpers/sanitizeUser"
 import { deleteImageFromCloudinary } from "../../config/cloudinary.config"
 import { JwtPayload } from "jsonwebtoken"
+import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper"
+import { userSearchableFields } from "./user.constant"
 
 const createUser = async (payload: CreateUserInput) => {
     const existingUser = await prisma.user.findUnique({
@@ -34,10 +36,68 @@ const createUser = async (payload: CreateUserInput) => {
     return safeUser
 }
 
-const getAllUsers = async () => {
-    const users = await prisma.user.findMany()
+const getAllUsers = async (filter: any, options: IOptions) => {
+    const { page, limit, skip, sortBy, sortOrder } = PaginationHelpers.calculatePagination(options)
+    const { searchTerm, ...filterData } = filter
+
+    const andConditions: Prisma.UserWhereInput[] = []
+
+    if (searchTerm) {
+        andConditions.push({
+            OR: userSearchableFields.map((field) => ({
+                [field]: {
+                    contains: searchTerm,
+                    mode: "insensitive"
+                }
+            }))
+        })
+    }
+
+    if (Object.keys(filterData).length > 0) {
+        const filterConditions = Object.keys(filterData).map((key) => {
+            return {
+                [key]: {
+                    equals: filterData[key]
+                }
+            }
+        })
+        andConditions.push({
+            AND: filterConditions
+        })
+    }
+
+    andConditions.push({
+        isDeleted: false
+    })
+
+    const whereConditions: Prisma.UserWhereInput = andConditions.length > 0 ? { AND: andConditions } : {}
+
+    const users = await prisma.user.findMany({
+        where: whereConditions,
+        skip,
+        take: limit,
+        orderBy: {
+            [sortBy]: sortOrder
+        }
+    })
+
+    const total = await prisma.user.count({
+        where: whereConditions
+    })
+
+    const totalPage = Math.ceil(total / limit)
+
+
     const result = users.map((user) => sanitizeUser(user, ["password"]))
-    return result
+    return {
+        meta: {
+            page,
+            limit,
+            totalPage,
+            total
+        },
+        data: result
+    }
 }
 
 const getUserById = async (id: string) => {
@@ -93,10 +153,35 @@ const getMe = async (decodedToken: JwtPayload) => {
     return user
 }
 
+const deleteUser = async (userId: string) => {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId
+        }
+    })
+
+    if (!user) {
+        throw new AppError(status.NOT_FOUND, "User not found")
+    }
+    await prisma.user.update({
+        where: {
+            id: userId
+        },
+        data: {
+            isDeleted: true
+        }
+    })
+
+    return {
+        message: "User deleted successfully"
+    }
+}
+
 export const UserService = {
     createUser,
     getAllUsers,
     getUserById,
     updateUser,
-    getMe
+    getMe,
+    deleteUser
 }
