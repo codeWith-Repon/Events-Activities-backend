@@ -4,6 +4,8 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
 import { User } from "../../../generated/prisma/client";
+import pick from "../../helpers/pick";
+import { userFilterableFields } from "./user.constant";
 
 const createUser = catchAsync(
     async (req: Request, res: Response) => {
@@ -19,7 +21,11 @@ const createUser = catchAsync(
 
 const getAllUsers = catchAsync(
     async (req: Request, res: Response) => {
-        const result = await UserService.getAllUsers()
+
+        const options = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
+        const filter = pick(req.query, userFilterableFields);
+
+        const result = await UserService.getAllUsers(filter, options)
         sendResponse(res, {
             statusCode: status.OK,
             success: true,
@@ -71,10 +77,24 @@ const getMe = catchAsync(
     }
 )
 
+const deleteUser = catchAsync(
+    async (req: Request, res: Response) => {
+        const { userId } = req.params
+        const result = await UserService.deleteUser(userId as string)
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User deleted successfully",
+            data: result
+        })
+    }
+)
+
 export const UserController = {
     createUser,
     getAllUsers,
     getUserById,
     updateUser,
-    getMe
+    getMe,
+    deleteUser
 }

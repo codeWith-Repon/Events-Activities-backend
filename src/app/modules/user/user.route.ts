@@ -28,10 +28,15 @@ router.get(
 
 router.get(
     "/:userId",
-    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
     UserController.getUserById
 );
 
+router.delete(
+    "/:userId",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    UserController.deleteUser
+);
 
 router.patch(
     "/",
