@@ -49,8 +49,8 @@ export const updateEventSchema = z.object({
 
     fee: z.number().min(0).optional(),
 
-    image: z.array(z.url()).optional(),
+    images: z.array(z.url()).optional(),
+    deleteImages: z.array(z.string()).optional(),
 
     status: z.enum(["OPEN", "FULL", "CANCELLED", "COMPLETED"]).optional(),
-
 });
