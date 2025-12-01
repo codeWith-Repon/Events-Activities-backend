@@ -13,6 +13,7 @@ model User {
   email         String    @unique
   password      String
   role          UserRole  @default(USER)
+  isHost        Boolean   @default(false)
   gender        Gender    @default(MALE)
   dob           DateTime?
   address       String?
@@ -35,8 +36,8 @@ model Host {
   id                String @id @default(uuid())
   userId            String @unique
   user              User   @relation(fields: [userId], references: [id])
-  rating            Float
-  totalEventsHosted Int
+  rating            Float  @default(0)
+  totalEventsHosted Int    @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -68,6 +69,7 @@ model Event {
   id String @id @default(uuid())
 
   title           String
+  slug            String      @unique
   category        String
   description     String
   date            DateTime
@@ -76,7 +78,7 @@ model Event {
   minParticipants Int
   maxParticipants Int
   fee             Float       @default(0)
-  image           String[]
+  images           String[]
   status          EventStatus @default(OPEN)
 
   createdAt DateTime @default(now())

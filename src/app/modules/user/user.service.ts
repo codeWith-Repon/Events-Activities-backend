@@ -82,6 +82,9 @@ const getMe = async (decodedToken: JwtPayload) => {
     const result = await prisma.user.findUniqueOrThrow({
         where: {
             id: decodedToken.userId
+        },
+        include: {
+            hosts: true
         }
     })
 
