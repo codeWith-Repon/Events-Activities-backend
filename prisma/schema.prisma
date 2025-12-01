@@ -8,25 +8,27 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   name          String
-  email         String   @unique
+  email         String    @unique
   password      String
-  role          UserRole @default(USER)
-  gender        Gender   @default(MALE)
+  role          UserRole  @default(USER)
+  gender        Gender    @default(MALE)
   dob           DateTime?
   address       String?
   contactNumber String?
   bio           String?
   profileImage  String?
-  status        Status   @default(ACTIVE)
-  isDeleted     Boolean  @default(false)
-  isVerified    Boolean  @default(false)
+  status        Status    @default(ACTIVE)
+  isDeleted     Boolean   @default(false)
+  isVerified    Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   hosts Host?
+
+  @@map("users")
 }
 
 model Host {
@@ -38,6 +40,10 @@ model Host {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  events Event[]
+
+  @@map("hosts")
 }
 
 enum UserRole {
@@ -56,4 +62,34 @@ enum Status {
   ACTIVE
   INACTIVE
   BLOCKED
+}
+
+model Event {
+  id String @id @default(uuid())
+
+  title           String
+  category        String
+  description     String
+  date            DateTime
+  time            String // will store: "10:00 AM"
+  location        String
+  minParticipants Int
+  maxParticipants Int
+  fee             Float       @default(0)
+  image           String[]
+  status          EventStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  host      Host?    @relation(fields: [hostId], references: [id])
+  hostId    String?
+
+  @@map("events")
+}
+
+enum EventStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
 }
