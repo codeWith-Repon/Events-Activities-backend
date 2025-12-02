@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
+  provider        = "prisma-client"
   output   = "../src/generated/prisma"
+  previewFeatures = ["strictUndefinedChecks"]
 }
 
 datasource db {
@@ -27,7 +28,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hosts Host?
+  hosts             Host?
+  eventParticipants EventParticipant[]
+  payments          Payment[]
 
   @@map("users")
 }
@@ -42,7 +45,8 @@ model Host {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  events Event[]
+  events            Event[]
+  eventParticipants EventParticipant[]
 
   @@map("hosts")
 }
@@ -78,13 +82,16 @@ model Event {
   minParticipants Int
   maxParticipants Int
   fee             Float       @default(0)
-  images           String[]
+  images          String[]
   status          EventStatus @default(OPEN)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  host      Host?    @relation(fields: [hostId], references: [id])
-  hostId    String?
+  host      Host     @relation(fields: [hostId], references: [id])
+  hostId    String
+
+  eventParticipants EventParticipant[]
+  payments          Payment[]
 
   @@map("events")
 }
@@ -94,4 +101,64 @@ enum EventStatus {
   FULL
   CANCELLED
   COMPLETED
+}
+
+model EventParticipant {
+  id String @id @default(uuid())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  hostId String
+  host   Host   @relation(fields: [hostId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  joinStatus    JoinStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@map("event_participants")
+}
+
+enum JoinStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  amount Float
+
+  transactionId String
+  paymentStatus PaymentStatus @default(PENDING)
+
+  paymentGatewayData String?
+
+  invoiceUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
 }

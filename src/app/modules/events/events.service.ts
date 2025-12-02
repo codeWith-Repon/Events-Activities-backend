@@ -120,7 +120,19 @@ const getAllEvents = async (filters: any, options: IOptions) => {
             [sortBy]: sortOrder
         },
         include: {
-            host: true
+            host: {
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            role: true,
+                            profileImage: true,
+                            gender: true
+                        }
+                    }
+                }
+            }
         }
     })
 
@@ -147,7 +159,19 @@ const getEventBySlug = async (slug: string) => {
             slug
         },
         include: {
-            host: true
+            host: {
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            role: true,
+                            profileImage: true,
+                            gender: true
+                        }
+                    }
+                }
+            }
         }
     })
 
