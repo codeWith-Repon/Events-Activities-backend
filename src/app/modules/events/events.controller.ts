@@ -5,7 +5,6 @@ import { sendResponse } from "../../utils/sendResponse"
 import status from "http-status"
 import pick from "../../helpers/pick"
 import { eventFilterableFields } from "./events.constant"
-import { meta } from "zod/v4/core"
 
 
 const createEvent = catchAsync(
