@@ -20,7 +20,18 @@ router.get(
     "/",
     checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
     EventParticipantController.getAllEventParticipants
+)
 
+router.get(
+    "/:id",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
+    EventParticipantController.getEventParticipantById
+)
+
+router.delete(
+    "/:id",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
+    EventParticipantController.deleteEventParticipantById
 )
 
 export const EventParticipantRoutes = router

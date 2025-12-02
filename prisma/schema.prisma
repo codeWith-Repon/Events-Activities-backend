@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client"
-  output   = "../src/generated/prisma"
+  output          = "../src/generated/prisma"
   previewFeatures = ["strictUndefinedChecks"]
 }
 
@@ -72,18 +72,19 @@ enum Status {
 model Event {
   id String @id @default(uuid())
 
-  title           String
-  slug            String      @unique
-  category        String
-  description     String
-  date            DateTime
-  time            String // will store: "10:00 AM"
-  location        String
-  minParticipants Int
-  maxParticipants Int
-  fee             Float       @default(0)
-  images          String[]
-  status          EventStatus @default(OPEN)
+  title             String
+  slug              String      @unique
+  category          String
+  description       String
+  date              DateTime
+  time              String // will store: "10:00 AM"
+  location          String
+  minParticipants   Int
+  maxParticipants   Int
+  totalParticipants Int         @default(0)
+  fee               Float       @default(0)
+  images            String[]
+  status            EventStatus @default(OPEN)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

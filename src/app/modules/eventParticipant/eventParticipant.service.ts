@@ -2,7 +2,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
-import { Prisma } from "../../../generated/prisma/client";
+import { EventParticipant, Prisma } from "../../../generated/prisma/client";
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
@@ -69,7 +69,7 @@ const createEventParticipant = async (
 const getAllEventParticipants = async (filters: any, options: IOptions) => {
     const { page, limit, skip, sortBy, sortOrder } = PaginationHelpers.calculatePagination(options)
     const { searchTerm, ...filterData } = filters
-    console.log(searchTerm)
+
     const andConditions: Prisma.EventParticipantWhereInput[] = []
 
     // search
@@ -144,7 +144,7 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
         },
         include: {
             user: { select: { name: true, email: true, profileImage: true, role: true } },
-            event: { select: { title: true, date: true, location: true, fee: true, category: true, status: true } },
+            event: { select: { title: true, date: true, location: true, fee: true, category: true, status: true, totalParticipants: true } },
             host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
         }
     });
@@ -158,7 +158,85 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
     };
 };
 
+const getEventParticipantById = async (id: string) => {
+    const participant = await prisma.eventParticipant.findUnique({
+        where: { id },
+        include: {
+            user: { select: { name: true, email: true, profileImage: true, role: true } },
+            event: { select: { title: true, description: true, date: true, time: true, location: true, fee: true, images: true, minParticipants: true, maxParticipants: true, totalParticipants: true, category: true, status: true } },
+            host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
+        },
+    });
+
+    if (!participant) {
+        throw new AppError(status.NOT_FOUND, "Event participant not found");
+    }
+
+    return participant;
+};
+
+// const updateEventParticipantById = async (
+//     id: string,
+//     decodedToken: JwtPayload,
+//     payload: Partial<EventParticipant>
+// ) => {
+
+//     const isParticipantExist = await prisma.eventParticipant.findUnique({
+//         where: { id },
+//     });
+
+//     if (!isParticipantExist) {
+//         throw new AppError(status.NOT_FOUND, "Event participant not found");
+//     }
+
+//     const participant = await prisma.eventParticipant.update({
+//         where: { id },
+//         data: payload,
+//         include: {
+//             user: { select: { name: true, email: true, profileImage: true, role: true } },
+//             event: { select: { title: true, description: true, date: true, time: true, location: true, fee: true, images: true, minParticipants: true, maxParticipants: true, totalParticipants: true, category: true, status: true } },
+//             host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
+//         },
+//     });
+
+//     return participant;
+// };
+
+const deleteEventParticipantById = async (id: string, decodedToken: JwtPayload) => {
+
+    const isHostExist = await prisma.host.findUnique({
+        where: {
+            userId: decodedToken.userId
+        }
+    })
+
+    if (!isHostExist) {
+        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
+    }
+
+    const isParticipantExist = await prisma.eventParticipant.findUnique({
+        where: { id },
+    });
+
+    if (!isParticipantExist) {
+        throw new AppError(status.NOT_FOUND, "Event participant not found");
+    }
+
+    if (isHostExist.id !== isParticipantExist.hostId) {
+        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
+    }
+
+    const participant = await prisma.eventParticipant.delete({
+        where: { id },
+    });
+
+    return participant;
+};
+
 export const eventParticipantService = {
     createEventParticipant,
-    getAllEventParticipants
+    getAllEventParticipants,
+    getEventParticipantById,
+    // updateEventParticipantById,
+    deleteEventParticipantById
 };
