@@ -2,8 +2,8 @@
 export const eventParticipantSearchableFields = [
     "user.name",
     "user.email",
-    // "host.user.name",
-    // "host.user.email",
+    "host.user.name",
+    "host.user.email",
     "event.title",
 ];
 

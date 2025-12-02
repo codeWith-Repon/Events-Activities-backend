@@ -76,10 +76,33 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
     if (searchTerm) {
         andConditions.push({
             OR: eventParticipantSearchableFields.map((field) => {
-                const [relation, relField] = field.split('.') as [string, string]
-                return {
-                    [relation]: {
-                        [relField]: {
+                const parts = field.split('.')
+
+                if (parts.length === 2) {
+                    const [relation, relField] = parts as [string, string]
+                    return {
+                        [relation]: {
+                            [relField]: {
+                                contains: searchTerm,
+                                mode: 'insensitive'
+                            }
+                        }
+                    }
+                } else if (parts.length === 3) {
+                    const [relation, nestedRelation, nestedField] = parts as [string, string, string]
+                    return {
+                        [relation]: {
+                            [nestedRelation]: {
+                                [nestedField]: {
+                                    contains: searchTerm,
+                                    mode: 'insensitive'
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    return {
+                        [field]: {
                             contains: searchTerm,
                             mode: 'insensitive'
                         }
