@@ -32,7 +32,37 @@ const getAllEventParticipants = catchAsync(
         sendResponse(res, {
             statusCode: status.OK,
             success: true,
-            message: "Successfully joined the event",
+            message: "All event participants retrieved successfully",
+            data: result
+        })
+    }
+)
+
+const getEventParticipantById = catchAsync(
+    async (req: Request, res: Response) => {
+
+        const { id } = req.params
+        const result = await eventParticipantService.getEventParticipantById(id as string)
+
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "Event participant retrieved successfully",
+            data: result
+        })
+    }
+)
+
+const deleteEventParticipantById = catchAsync(
+    async (req: Request, res: Response) => {
+
+        const { id } = req.params
+        const result = await eventParticipantService.deleteEventParticipantById(id as string, req.user)
+
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "Event participant deleted successfully",
             data: result
         })
     }
@@ -40,5 +70,7 @@ const getAllEventParticipants = catchAsync(
 
 export const EventParticipantController = {
     createEventParticipant,
-    getAllEventParticipants
+    getAllEventParticipants,
+    getEventParticipantById,
+    deleteEventParticipantById
 }
