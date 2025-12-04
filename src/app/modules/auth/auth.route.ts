@@ -12,6 +12,11 @@ router.post(
 )
 
 router.post(
+    "/logout",
+    AuthController.logOutUser
+)
+
+router.post(
     "/get-new-token",
     AuthController.getNewToken
 )

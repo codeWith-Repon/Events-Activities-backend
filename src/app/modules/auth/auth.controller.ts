@@ -22,6 +22,29 @@ const loginUser = catchAsync(
     }
 )
 
+const logOutUser = catchAsync(
+    async (req: Request, res: Response) => {
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+        })
+
+        res.clearCookie("accessToken", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+        })
+
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "User logged out successfully",
+            data: {}
+        })
+    }
+)
+
 const getNewToken = catchAsync(
     async (req: Request, res: Response) => {
         const result = await AuthService.getNewToken(req.cookies.refreshToken)
@@ -65,6 +88,7 @@ const changePassword = catchAsync(
 
 export const AuthController = {
     loginUser,
+    logOutUser,
     getNewToken,
     resetPassword,
     changePassword

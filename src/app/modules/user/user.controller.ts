@@ -3,7 +3,6 @@ import { UserService } from "./user.service";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
-import { User } from "../../../generated/prisma/client";
 import pick from "../../helpers/pick";
 import { userFilterableFields } from "./user.constant";
 
@@ -50,10 +49,15 @@ const getUserById = catchAsync(
 
 const updateUser = catchAsync(
     async (req: Request, res: Response) => {
-        const payload: User = {
-            ...req.body,
-            profileImage: req.file ? req.file?.path : undefined
+        let payload = req.body
+
+        if (req.file) {
+            payload = {
+                ...req.body,
+                profileImage: req.file ? req.file?.path : undefined
+            }
         }
+
         const result = await UserService.updateUser(payload, req.user)
         sendResponse(res, {
             statusCode: status.OK,

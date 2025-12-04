@@ -2,7 +2,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
-import { EventParticipant, Prisma } from "../../../generated/prisma/client";
+import { EventParticipant, EventStatus, Prisma } from "../../../generated/prisma/client";
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
@@ -25,12 +25,41 @@ const createEventParticipant = async (
         });
         if (!existsEvent) throw new AppError(status.NOT_FOUND, "Event not found");
 
+        const blockedStatuses: EventStatus[] = [
+            EventStatus.CANCELLED,
+            EventStatus.FULL,
+            EventStatus.COMPLETED
+        ];
+
+        if (blockedStatuses.includes(existsEvent.status as EventStatus)) {
+            throw new AppError(status.BAD_REQUEST, `Event is ${existsEvent.status}`);
+        }
+
+        // check user isHost status
+        const isUserExist = await tx.user.findUnique({
+            where: {
+                id: userId
+            }
+        })
+
+        if (isUserExist?.isHost) {
+            await tx.user.update({
+                where: {
+                    id: userId
+                },
+                data: {
+                    isHost: false
+                }
+            })
+        }
+
         // Prevent duplicate participation
         const existsEventParticipant = await tx.eventParticipant.findUnique({
             where: {
                 eventId_userId: { eventId: existsEvent.id, userId }
             }
         });
+
         if (existsEventParticipant)
             throw new AppError(status.BAD_REQUEST, "Already joined this event");
 
@@ -40,6 +69,14 @@ const createEventParticipant = async (
         });
         if (!existsHost)
             throw new AppError(status.BAD_REQUEST, "Host not available!");
+
+        // find userId in host table and prevent owner to join
+        const host = await tx.host.findUnique({
+            where: { userId }
+        })
+        if (host?.id === existsHost.id) {
+            throw new AppError(status.BAD_REQUEST, "You can't join your own event");
+        }
 
         // Create event participant
         const eventParticipant = await tx.eventParticipant.create({

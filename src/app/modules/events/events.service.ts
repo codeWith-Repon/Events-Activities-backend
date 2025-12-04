@@ -1,6 +1,6 @@
 import { JwtPayload } from "jsonwebtoken"
 import { prisma } from "../../../lib/prisma";
-import { Event, Prisma, User, UserRole } from "../../../generated/prisma/client";
+import { Event, JoinStatus, Prisma, User, UserRole } from "../../../generated/prisma/client";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { generateSlug } from "../../utils/generateSlug";
@@ -8,6 +8,7 @@ import { deleteImageFromCloudinary } from "../../config/cloudinary.config";
 import { TUpdateEvent } from "./events.interface";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventSearchableFields } from "./events.constant";
+import { generateTransactionId } from "../../utils/generateTransactionId";
 
 const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
@@ -75,6 +76,37 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
             }
         })
 
+        // 7. update event table
+        await tx.event.update({
+            where: {
+                id: event.id,
+            },
+            data: {
+                totalParticipants: {
+                    increment: 1
+                }
+            }
+        })
+
+        // 8. create particiPants 
+        await tx.eventParticipant.create({
+            data: {
+                eventId: event.id,
+                hostId: event.hostId,
+                userId,
+                joinStatus: JoinStatus.APPROVED
+            }
+        })
+
+        // 9. entry payment table
+        await tx.payment.create({
+            data: {
+                userId,
+                eventId: event.id,
+                amount: event.fee,
+                transactionId: generateTransactionId(),
+            }
+        });
 
         return event
     })
