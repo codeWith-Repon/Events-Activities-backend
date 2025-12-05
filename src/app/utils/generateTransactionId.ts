@@ -1,5 +1,5 @@
 
-export function generateTransactionId(length = 8, prefix = "Tnx") {
+export function generateTransactionId(length = 8, prefix = "TrxID") {
 
     const upperCaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowerCaseChars = "abcdefghijklmnopqrstuvwxyz";
