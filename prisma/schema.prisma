@@ -160,6 +160,8 @@ model Payment {
 enum PaymentStatus {
   PENDING
   PAID
+  CANCELLED
+  REJECTED
   FAILED
   REFUNDED
 }

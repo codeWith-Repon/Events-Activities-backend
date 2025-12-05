@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { eventParticipantSchema } from "./eventParticipant.validation";
+import { eventParticipantSchema, updateParticipantSchema } from "./eventParticipant.validation";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { UserRole } from "../../../generated/prisma/enums";
 import { EventParticipantController } from "./eventParticipant.controller";
@@ -26,6 +26,13 @@ router.get(
     "/:id",
     checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
     EventParticipantController.getEventParticipantById
+)
+
+router.patch(
+    "/:id",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
+    validateRequest(updateParticipantSchema),
+    EventParticipantController.updateEventParticipantById
 )
 
 router.delete(

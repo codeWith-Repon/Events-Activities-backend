@@ -53,6 +53,21 @@ const getEventParticipantById = catchAsync(
     }
 )
 
+const updateEventParticipantById = catchAsync(
+    async (req: Request, res: Response) => {
+
+        const { id } = req.params
+        const result = await eventParticipantService.updateEventParticipantById(id as string, req.user, req.body)
+
+        sendResponse(res, {
+            statusCode: status.OK,
+            success: true,
+            message: "Participant status updated successfully",
+            data: result
+        })
+    }
+)
+
 const deleteEventParticipantById = catchAsync(
     async (req: Request, res: Response) => {
 
@@ -71,6 +86,7 @@ const deleteEventParticipantById = catchAsync(
 export const EventParticipantController = {
     createEventParticipant,
     getAllEventParticipants,
+    updateEventParticipantById,
     getEventParticipantById,
     deleteEventParticipantById
 }
