@@ -21,6 +21,18 @@ interface EnvConfig {
     JWT_ACCESS_EXPIRES: string,
     JWT_REFRESH_SECRET: string,
     JWT_REFRESH_EXPIRES: string,
+    SSL: {
+        STORE_ID: string,
+        STORE_PASS: string,
+        SSL_PAYMENT_API: string,
+        SSL_VALIDATION_API: string,
+        SSL_SUCCESS_BACKEND_URL: string,
+        SSL_FAIL_BACKEND_URL: string,
+        SSL_CANCEL_BACKEND_URL: string,
+        SSL_SUCCESS_FRONTEND_URL: string,
+        SSL_FAIL_FRONTEND_URL: string,
+        SSL_CANCEL_FRONTEND_URL: string
+    }
 }
 
 const loadEnvVariable = (): EnvConfig => {
@@ -40,7 +52,17 @@ const loadEnvVariable = (): EnvConfig => {
         "SUPER_ADMIN_EMAIL",
         "SUPER_ADMIN_PASSWORD",
         "FRONTEND_URL",
-        "FRONTEND_LIVE_URL"
+        "FRONTEND_LIVE_URL",
+        "SSL_STORE_ID",
+        "SSL_STORE_PASS",
+        "SSL_PAYMENT_API",
+        "SSL_VALIDATION_API",
+        "SSL_SUCCESS_BACKEND_URL",
+        "SSL_FAIL_BACKEND_URL",
+        "SSL_CANCEL_BACKEND_URL",
+        "SSL_SUCCESS_FRONTEND_URL",
+        "SSL_FAIL_FRONTEND_URL",
+        "SSL_CANCEL_FRONTEND_URL",
     ];
     requiredEnvVariables.forEach(key => {
         if (!process.env[key]) {
@@ -67,6 +89,18 @@ const loadEnvVariable = (): EnvConfig => {
         JWT_ACCESS_EXPIRES: process.env.JWT_ACCESS_EXPIRES!,
         JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
         JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES!,
+        SSL: {
+            STORE_ID: process.env.SSL_STORE_ID!,
+            STORE_PASS: process.env.SSL_STORE_PASS!,
+            SSL_PAYMENT_API: process.env.SSL_PAYMENT_API!,
+            SSL_VALIDATION_API: process.env.SSL_VALIDATION_API!,
+            SSL_SUCCESS_BACKEND_URL: process.env.SSL_SUCCESS_BACKEND_URL!,
+            SSL_FAIL_BACKEND_URL: process.env.SSL_FAIL_BACKEND_URL!,
+            SSL_CANCEL_BACKEND_URL: process.env.SSL_CANCEL_BACKEND_URL!,
+            SSL_SUCCESS_FRONTEND_URL: process.env.SSL_SUCCESS_FRONTEND_URL!,
+            SSL_FAIL_FRONTEND_URL: process.env.SSL_FAIL_FRONTEND_URL!,
+            SSL_CANCEL_FRONTEND_URL: process.env.SSL_CANCEL_FRONTEND_URL!
+        }
     }
 }
 
