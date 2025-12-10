@@ -6,6 +6,8 @@ import { EventParticipant, EventStatus, JoinStatus, PaymentStatus, Prisma } from
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
+import { ISSLCommerz } from "../sslCommerz/sslCommerz.interface";
+import { SSLService } from "../sslCommerz/sslCommerz.service";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -16,7 +18,7 @@ const createEventParticipant = async (
     decodedToken: JwtPayload
 ) => {
     const userId = decodedToken.userId as string;
-
+    const transactionId = generateTransactionId()
     return await prisma.$transaction(async (tx) => {
 
         // Check event exists
@@ -90,13 +92,23 @@ const createEventParticipant = async (
                 userId,
                 eventId: payload.eventId,
                 amount: existsEvent.fee,
-                transactionId: generateTransactionId(),
+                transactionId: transactionId,
                 paymentGatewayData: Prisma.skip,
                 invoiceUrl: Prisma.skip
             }
         });
 
-        return eventParticipant;
+        const sslPayload: ISSLCommerz = {
+            name: isUserExist?.name as string,
+            email: isUserExist?.email as string,
+            phoneNumber: isUserExist?.contactNumber as string || "01712349873",
+            address: isUserExist?.address as string || "Dhaka, Bangladesh",
+            amount: existsEvent.fee,
+            transactionId: transactionId,
+        };
+        const sslPayment = await SSLService.sslPaymentInit(sslPayload);
+
+        return { eventParticipant, paymentUrl: sslPayment.GatewayPageURL, };
     });
 };
 
