@@ -5,11 +5,16 @@ import notFound from './app/middlewares/notFound';
 import { router } from './app/routes';
 import cookieParser from 'cookie-parser'
 import morgan from "morgan";
+import { envVars } from './app/config/env';
 
 const app: Application = express();
 
 
-app.use(cors())
+app.use(cors({
+    origin: [envVars.FRONTEND_URL, envVars.FRONTEND_LIVE_URL],
+    credentials: true
+}))
+
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))

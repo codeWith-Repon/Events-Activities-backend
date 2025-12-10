@@ -9,16 +9,26 @@ import { envVars } from "../../config/env";
 
 const loginUser = async (payload: { email: string; password: string }) => {
 
-    const isUserExist = await prisma.user.findUniqueOrThrow({
+    const isUserExist = await prisma.user.findUnique({
         where: {
             email: payload.email
         }
     })
 
+    if (!isUserExist) {
+        throw new AppError(
+            status.BAD_REQUEST,
+            "User not found. Please register first."
+        );
+    }
+
     const isPasswordMatch = await bcryptjs.compare(payload.password, isUserExist.password)
 
     if (!isPasswordMatch) {
-        throw new AppError(status.BAD_REQUEST, "Invalid credentials")
+        throw new AppError(
+            status.BAD_REQUEST,
+            "Invalid email or password."
+        );
     }
 
     const token = createUserToken(isUserExist)

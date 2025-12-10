@@ -178,8 +178,24 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
         },
         include: {
             user: { select: { name: true, email: true, profileImage: true, role: true } },
-            event: { select: { title: true, date: true, location: true, fee: true, category: true, status: true, totalParticipants: true } },
-            host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
+            event: {
+                select: {
+                    id: true,
+                    title: true, slug: true, description: true, date: true, time: true, location: true, minParticipants: true, maxParticipants: true, images: true, fee: true, category: true, status: true, totalParticipants: true, hostId: true, host: {
+                        include: {
+                            user: {
+                                select: {
+                                    name: true,
+                                    email: true,
+                                    profileImage: true,
+                                    role: true,
+                                    gender: true
+                                }
+                            }
+                        }
+                    },
+                }
+            },
         }
     });
 

@@ -8,7 +8,6 @@ import { deleteImageFromCloudinary } from "../../config/cloudinary.config";
 import { TUpdateEvent } from "./events.interface";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventSearchableFields } from "./events.constant";
-import { generateTransactionId } from "../../utils/generateTransactionId";
 
 const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
@@ -67,6 +66,9 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
         payload.slug = slug
         payload.date = new Date(payload.date)
+        payload.minParticipants = Number(payload.minParticipants) || 1;
+        payload.maxParticipants = Number(payload.maxParticipants) || 1;
+        payload.fee = Number(payload.fee) || 0;
 
         // 6. create event
         const event = await tx.event.create({
@@ -75,38 +77,6 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
                 hostId: host.id
             }
         })
-
-        // 7. update event table
-        await tx.event.update({
-            where: {
-                id: event.id,
-            },
-            data: {
-                totalParticipants: {
-                    increment: 1
-                }
-            }
-        })
-
-        // 8. create particiPants 
-        await tx.eventParticipant.create({
-            data: {
-                eventId: event.id,
-                hostId: event.hostId,
-                userId,
-                joinStatus: JoinStatus.APPROVED
-            }
-        })
-
-        // 9. entry payment table
-        await tx.payment.create({
-            data: {
-                userId,
-                eventId: event.id,
-                amount: event.fee,
-                transactionId: generateTransactionId(),
-            }
-        });
 
         return event
     })
