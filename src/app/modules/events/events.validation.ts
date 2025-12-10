@@ -12,17 +12,14 @@ export const createEventSchema = z.object({
         "Invalid date format"
     ),
 
-    time: z.string().regex(
-        /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i,
-        "Time must be in hh:mm AM/PM format"
-    ),
+    time: z.string("Time is required"),
 
     location: z.string().min(3, "Location is required"),
 
-    minParticipants: z.number().min(1, "Minimum participant must be at least 1"),
-    maxParticipants: z.number().min(1),
+    minParticipants: z.string("Min participants is required"),
+    maxParticipants: z.string("Max participants is required"),
 
-    fee: z.number().min(0).default(0),
+    fee: z.string().optional(),
 
     image: z.array(z.url()).optional(),
 });
@@ -37,10 +34,7 @@ export const updateEventSchema = z.object({
         .refine((val) => !isNaN(Date.parse(val)), "Invalid date")
         .optional(),
 
-    time: z.string().regex(
-        /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i,
-        "Time must be in hh:mm AM/PM format"
-    ).optional(),
+    time: z.string().optional(),
 
     location: z.string().optional(),
 

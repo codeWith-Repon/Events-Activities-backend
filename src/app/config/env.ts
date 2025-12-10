@@ -6,6 +6,8 @@ interface EnvConfig {
     PORT: string,
     DATABASE_URL: string,
     NODE_ENV: "development" | "production",
+    FRONTEND_URL: string,
+    FRONTEND_LIVE_URL: string,
     BCRYPT_SALT_ROUND: string,
     SUPER_ADMIN_NAME: string,
     SUPER_ADMIN_EMAIL: string,
@@ -37,6 +39,8 @@ const loadEnvVariable = (): EnvConfig => {
         "SUPER_ADMIN_NAME",
         "SUPER_ADMIN_EMAIL",
         "SUPER_ADMIN_PASSWORD",
+        "FRONTEND_URL",
+        "FRONTEND_LIVE_URL"
     ];
     requiredEnvVariables.forEach(key => {
         if (!process.env[key]) {
@@ -48,6 +52,8 @@ const loadEnvVariable = (): EnvConfig => {
         PORT: process.env.PORT!,
         DATABASE_URL: process.env.DATABASE_URL!,
         NODE_ENV: process.env.NODE_ENV as "development" | "production",
+        FRONTEND_URL: process.env.FRONTEND_URL!,
+        FRONTEND_LIVE_URL: process.env.FRONTEND_LIVE_URL!,
         BCRYPT_SALT_ROUND: process.env.BCRYPT_SALT_ROUND!,
         SUPER_ADMIN_NAME: process.env.SUPER_ADMIN_NAME!,
         SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL!,
