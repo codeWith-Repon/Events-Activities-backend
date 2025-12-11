@@ -10,6 +10,7 @@ export const eventParticipantSearchableFields = [
 // filterable (exact match / enum / fk)
 export const eventParticipantFilterableFields = [
     "searchTerm",
+    "id",
     "event.category",
     "event.status",
     "user.gender",

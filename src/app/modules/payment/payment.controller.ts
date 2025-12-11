@@ -23,7 +23,7 @@ const successPayment = catchAsync(async (req: Request, res: Response) => {
     const result = await PaymentService.successPayment(query)
 
     if (result.success) {
-        res.redirect(`${envVars.SSL.SSL_SUCCESS_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}`)
+        res.redirect(`${envVars.SSL.SSL_SUCCESS_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}&event=${result.updatedPayment.eventId}`)
     }
 })
 
@@ -32,7 +32,7 @@ const failPayment = catchAsync(async (req: Request, res: Response) => {
     const result = await PaymentService.failPayment(query)
 
     if (!result.success) {
-        res.redirect(`${envVars.SSL.SSL_FAIL_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}`)
+        res.redirect(`${envVars.SSL.SSL_FAIL_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}&event=${result.updatedPayment.eventId}`)
     }
 })
 
@@ -41,7 +41,7 @@ const cancelPayment = catchAsync(async (req: Request, res: Response) => {
     const result = await PaymentService.failPayment(query)
 
     if (!result.success) {
-        res.redirect(`${envVars.SSL.SSL_CANCEL_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}`)
+        res.redirect(`${envVars.SSL.SSL_CANCEL_FRONTEND_URL}?transactionId=${query.transactionId}&message=${result.message}&amount=${query.amount}&status=${query.status}&event=${result.updatedPayment.eventId}`)
     }
 })
 
