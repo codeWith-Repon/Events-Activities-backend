@@ -11,7 +11,7 @@ const app: Application = express();
 
 
 app.use(cors({
-    origin: [envVars.FRONTEND_URL, envVars.FRONTEND_LIVE_URL],
+    origin: [envVars.FRONTEND_URL, envVars.FRONTEND_LIVE_URL].filter(Boolean),
     credentials: true
 }))
 
