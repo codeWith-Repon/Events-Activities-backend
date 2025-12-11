@@ -3,6 +3,7 @@ import { UserRoutes } from "../modules/user/user.route";
 import { AuthRoutes } from "../modules/auth/auth.route";
 import { EventsRoutes } from "../modules/events/events.route";
 import { EventParticipantRoutes } from "../modules/eventParticipant/eventParticipant.route";
+import { PaymentRoutes } from "../modules/payment/payment.route";
 
 
 export const router: Router = Router()
@@ -23,6 +24,10 @@ const moduleRoutes = [
     {
         path: '/event-participants',
         route: EventParticipantRoutes
+    },
+    {
+        path: '/payment',
+        route: PaymentRoutes
     }
 ]
 

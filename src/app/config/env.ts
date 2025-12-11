@@ -31,7 +31,8 @@ interface EnvConfig {
         SSL_CANCEL_BACKEND_URL: string,
         SSL_SUCCESS_FRONTEND_URL: string,
         SSL_FAIL_FRONTEND_URL: string,
-        SSL_CANCEL_FRONTEND_URL: string
+        SSL_CANCEL_FRONTEND_URL: string,
+        SSL_IPN_API: string
     }
 }
 
@@ -63,6 +64,7 @@ const loadEnvVariable = (): EnvConfig => {
         "SSL_SUCCESS_FRONTEND_URL",
         "SSL_FAIL_FRONTEND_URL",
         "SSL_CANCEL_FRONTEND_URL",
+        "SSL_IPN_API"
     ];
     requiredEnvVariables.forEach(key => {
         if (!process.env[key]) {
@@ -99,7 +101,8 @@ const loadEnvVariable = (): EnvConfig => {
             SSL_CANCEL_BACKEND_URL: process.env.SSL_CANCEL_BACKEND_URL!,
             SSL_SUCCESS_FRONTEND_URL: process.env.SSL_SUCCESS_FRONTEND_URL!,
             SSL_FAIL_FRONTEND_URL: process.env.SSL_FAIL_FRONTEND_URL!,
-            SSL_CANCEL_FRONTEND_URL: process.env.SSL_CANCEL_FRONTEND_URL!
+            SSL_CANCEL_FRONTEND_URL: process.env.SSL_CANCEL_FRONTEND_URL!,
+            SSL_IPN_API: process.env.SSL_IPN_API!
         }
     }
 }
