@@ -77,7 +77,7 @@ model Event {
   category          String
   description       String
   date              DateTime
-  time              String // will store: "10:00 AM"
+  time              String 
   location          String
   minParticipants   Int
   maxParticipants   Int
@@ -144,7 +144,7 @@ model Payment {
 
   amount Float
 
-  transactionId String
+  transactionId String        @unique
   paymentStatus PaymentStatus @default(PENDING)
 
   paymentGatewayData String?
