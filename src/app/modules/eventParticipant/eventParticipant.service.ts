@@ -19,7 +19,8 @@ const createEventParticipant = async (
 ) => {
     const userId = decodedToken.userId as string;
     const transactionId = generateTransactionId()
-    return await prisma.$transaction(async (tx) => {
+
+    const { eventParticipant, user, event } = await prisma.$transaction(async (tx) => {
 
         // Check event exists
         const existsEvent = await tx.event.findUnique({
@@ -59,13 +60,13 @@ const createEventParticipant = async (
 
 
         // check user isHost status
-        const isUserExist = await tx.user.findUnique({
+        const user = await tx.user.findUnique({
             where: {
                 id: userId
             }
         })
 
-        if (isUserExist?.isHost) {
+        if (user?.isHost) {
             await tx.user.update({
                 where: {
                     id: userId
@@ -98,18 +99,26 @@ const createEventParticipant = async (
             }
         });
 
-        const sslPayload: ISSLCommerz = {
-            name: isUserExist?.name as string,
-            email: isUserExist?.email as string,
-            phoneNumber: isUserExist?.contactNumber as string || "01712349873",
-            address: isUserExist?.address as string || "Dhaka, Bangladesh",
-            amount: existsEvent.fee,
-            transactionId: transactionId,
-        };
-        const sslPayment = await SSLService.sslPaymentInit(sslPayload);
+        return { eventParticipant, user, event: existsEvent };
 
-        return { eventParticipant, paymentUrl: sslPayment.GatewayPageURL, };
     });
+
+    // SSL Payment init
+    const sslPayload: ISSLCommerz = {
+        name: user?.name as string,
+        email: user?.email as string,
+        phoneNumber: user?.contactNumber || "01712349873",
+        address: user?.address || "Dhaka, Bangladesh",
+        amount: event.fee,
+        transactionId
+    };
+
+    const sslPayment = await SSLService.sslPaymentInit(sslPayload);
+
+    return {
+        eventParticipant,
+        paymentUrl: sslPayment.GatewayPageURL
+    };
 };
 
 const getAllEventParticipants = async (filters: any, options: IOptions) => {
