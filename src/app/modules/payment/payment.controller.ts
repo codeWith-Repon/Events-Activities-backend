@@ -58,7 +58,7 @@ const validatePayment = catchAsync(async (req: Request, res: Response) => {
 })
 
 
-export const PaymentController = {
+export const PaymentController: Record<string, any> = {
     successPayment,
     failPayment,
     cancelPayment,
