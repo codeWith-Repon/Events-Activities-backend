@@ -83,7 +83,7 @@ const deleteEventParticipantById = catchAsync(
     }
 )
 
-export const EventParticipantController = {
+export const EventParticipantController: Record<string, any> = {
     createEventParticipant,
     getAllEventParticipants,
     updateEventParticipantById,

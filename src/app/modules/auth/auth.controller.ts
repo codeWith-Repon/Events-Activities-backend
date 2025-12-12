@@ -86,7 +86,7 @@ const changePassword = catchAsync(
     }
 )
 
-export const AuthController = {
+export const AuthController: Record<string, any> = {
     loginUser,
     logOutUser,
     getNewToken,

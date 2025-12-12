@@ -95,7 +95,7 @@ const getAllEventsCategory = catchAsync(
     }
 )
 
-export const EventsController = {
+export const EventsController: Record<string, any> = {
     createEvent,
     getAllEvents,
     getEventBySlug,

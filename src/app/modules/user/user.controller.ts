@@ -94,7 +94,7 @@ const deleteUser = catchAsync(
     }
 )
 
-export const UserController = {
+export const UserController: Record<string, any> = {
     createUser,
     getAllUsers,
     getUserById,
