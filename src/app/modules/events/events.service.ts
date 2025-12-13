@@ -13,21 +13,21 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
     const { userId } = decodedToken
 
-    return await prisma.$transaction(async (tx) => {
-        // 1. find the user
-
-        const isUserExist: User | null = await tx.user.findUnique({
-            where: {
-                id: userId
-            }
-        })
-
-        if (!isUserExist) {
-            throw new AppError(status.BAD_REQUEST, "User not found")
+    const user: User | null = await prisma.user.findUnique({
+        where: {
+            id: userId
         }
-        // 2. update isHost = true in user table
+    })
 
-        if (!isUserExist.isHost) {
+    if (!user) {
+        throw new AppError(status.BAD_REQUEST, "User not found")
+    }
+
+    const slug = await generateSlug(payload.title, prisma.event)
+
+    return await prisma.$transaction(async (tx) => {
+
+        if (!user.isHost) {
             await tx.user.update({
                 where: { id: userId },
                 data: { isHost: true }
@@ -35,7 +35,7 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
         }
         // 3. convert USER -> HOST
         // Admin / super admin role not touch 
-        if (isUserExist.role === UserRole.USER) {
+        if (user.role === UserRole.USER) {
             await tx.user.update({
                 where: { id: userId },
                 data: { role: UserRole.HOST }
@@ -61,8 +61,7 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
             })
         }
 
-        // 5. generate unique slug 
-        const slug = await generateSlug(payload.title, tx.event)
+
 
         payload.slug = slug
         payload.date = new Date(payload.date)
