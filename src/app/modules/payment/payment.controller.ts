@@ -13,7 +13,7 @@ const initPayment = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: 200,
         success: true,
-        message: "Payment done successfully",
+        message: "Payment init successfully",
         data: result,
     })
 })
