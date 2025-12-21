@@ -6,8 +6,6 @@ import { EventParticipant, EventStatus, JoinStatus, PaymentStatus, Prisma } from
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
-import { ISSLCommerz } from "../sslCommerz/sslCommerz.interface";
-import { SSLService } from "../sslCommerz/sslCommerz.service";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -20,7 +18,7 @@ const createEventParticipant = async (
     const userId = decodedToken.userId as string;
     const transactionId = generateTransactionId()
 
-    const { eventParticipant, user, event } = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
 
         // Check event exists
         const existsEvent = await tx.event.findUnique({
@@ -28,13 +26,7 @@ const createEventParticipant = async (
         });
         if (!existsEvent) throw new AppError(status.NOT_FOUND, "Event not found");
 
-        const checkEventOwner = await tx.host.findUnique({
-            where: {
-                userId
-            }
-        })
-
-        if (checkEventOwner?.id === existsEvent.hostId) {
+        if (userId === existsEvent.hostId) {
             throw new AppError(status.BAD_REQUEST, "You can't join your own event")
         }
 
@@ -65,6 +57,7 @@ const createEventParticipant = async (
                 id: userId
             }
         })
+        const isFree = existsEvent.fee === 0
 
         if (user?.isHost) {
             await tx.user.update({
@@ -77,48 +70,61 @@ const createEventParticipant = async (
             })
         }
 
-
         // Create event participant
         const eventParticipant = await tx.eventParticipant.create({
             data: {
                 userId,
                 eventId: payload.eventId,
-                hostId: existsEvent.hostId
+                hostId: existsEvent.hostId,
+                joinStatus: isFree ? JoinStatus.APPROVED : JoinStatus.PENDING,
+                paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
             }
         });
 
+        // Update total participants
+
+        if (isFree) {
+
+            if (existsEvent.totalParticipants >= existsEvent.maxParticipants) {
+                throw new AppError(status.BAD_REQUEST, "Event is already full");
+            }
+
+            const updatedEvent = await tx.event.update({
+                where: {
+                    id: existsEvent.id,
+                },
+                data: {
+                    totalParticipants: {
+                        increment: 1
+                    }
+                }
+            })
+
+            if (updatedEvent.totalParticipants === updatedEvent.maxParticipants) {
+                await tx.event.update({
+                    where: {
+                        id: existsEvent.id,
+                    },
+                    data: {
+                        status: EventStatus.FULL
+                    }
+                })
+            }
+        }
+
         // Create payment safely
-        await tx.payment.create({
+        if (!isFree) await tx.payment.create({
             data: {
                 userId,
                 eventId: payload.eventId,
                 amount: existsEvent.fee,
                 transactionId: transactionId,
-                paymentGatewayData: Prisma.skip,
-                invoiceUrl: Prisma.skip
             }
         });
-
-        return { eventParticipant, user, event: existsEvent };
-
+        return eventParticipant;
     });
 
-    // SSL Payment init
-    const sslPayload: ISSLCommerz = {
-        name: user?.name as string,
-        email: user?.email as string,
-        phoneNumber: user?.contactNumber || "01712349873",
-        address: user?.address || "Dhaka, Bangladesh",
-        amount: event.fee,
-        transactionId
-    };
-
-    const sslPayment = await SSLService.sslPaymentInit(sslPayload);
-
-    return {
-        eventParticipant,
-        paymentUrl: sslPayment.GatewayPageURL
-    };
+    return result
 };
 
 const getAllEventParticipants = async (filters: any, options: IOptions) => {
