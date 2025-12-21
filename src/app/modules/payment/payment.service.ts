@@ -1,5 +1,5 @@
 import status from "http-status"
-import { JoinStatus, PaymentStatus } from "../../../generated/prisma/enums"
+import { EventStatus, JoinStatus, PaymentStatus } from "../../../generated/prisma/enums"
 import { prisma } from "../../../lib/prisma"
 import AppError from "../../errorHelpers/AppError"
 import { generateTransactionId } from "../../utils/generateTransactionId"
@@ -46,6 +46,9 @@ const paymentInit = async (participantId: string) => {
                 }
             });
         }
+    }, {
+        maxWait: 5000,
+        timeout: 15000
     });
 
     const sslPayload: ISSLCommerz = {
@@ -58,6 +61,10 @@ const paymentInit = async (participantId: string) => {
     };
 
     const sslPayment = await SSLService.sslPaymentInit(sslPayload);
+
+    if (!sslPayment?.GatewayPageURL) {
+        throw new AppError(status.INTERNAL_SERVER_ERROR, "Failed to initialize SSLCommerz gateway");
+    }
 
     return {
         paymentUrl: sslPayment.GatewayPageURL,
@@ -88,19 +95,31 @@ const successPayment = async (query: Record<string, string>) => {
             }
         })
 
-        // 3. Increment total participants in event table
-        await tx.event.update({
+        //3. change event status based on total participants
+        const updatedEvent = await tx.event.update({
             where: { id: updatedPayment.eventId },
             data: {
                 totalParticipants: { increment: 1 },
             },
         });
 
+        if (updatedEvent.totalParticipants >= updatedEvent.maxParticipants) {
+            await tx.event.update({
+                where: { id: updatedPayment.eventId },
+                data: {
+                    status: EventStatus.FULL
+                }
+            });
+        }
+
         return {
             success: true,
             message: "Payment completed successfully!",
             updatedPayment,
         };
+    }, {
+        maxWait: 10000,
+        timeout: 20000
     })
 }
 
