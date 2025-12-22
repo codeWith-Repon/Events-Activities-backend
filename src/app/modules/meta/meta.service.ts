@@ -1,6 +1,6 @@
 import { endOfDay, subDays, startOfMonth } from "date-fns";
 import { prisma } from "../../../lib/prisma";
-import { PaymentStatus, UserRole } from "../../../generated/prisma";
+import { PaymentStatus, UserRole } from "../../../generated/prisma/enums";
 
 const getAdminDashboardMetaData = async (query: any) => {
     const { startDate, endDate, duration } = query;
