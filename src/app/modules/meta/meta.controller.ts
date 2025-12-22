@@ -16,6 +16,6 @@ const getMetaData = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
-export const AdminController = {
+export const AdminController: Record<string, any> = {
     getMetaData
 }
