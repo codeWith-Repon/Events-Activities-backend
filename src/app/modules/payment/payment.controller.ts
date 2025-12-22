@@ -13,7 +13,7 @@ const initPayment = catchAsync(async (req: Request, res: Response) => {
     sendResponse(res, {
         statusCode: 200,
         success: true,
-        message: "Payment done successfully",
+        message: "Payment init successfully",
         data: result,
     })
 })
@@ -58,7 +58,7 @@ const validatePayment = catchAsync(async (req: Request, res: Response) => {
 })
 
 
-export const PaymentController = {
+export const PaymentController: Record<string, any> = {
     successPayment,
     failPayment,
     cancelPayment,

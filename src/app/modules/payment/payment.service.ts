@@ -1,5 +1,5 @@
 import status from "http-status"
-import { JoinStatus, PaymentStatus } from "../../../generated/prisma/enums"
+import { EventStatus, JoinStatus, PaymentStatus } from "../../../generated/prisma/enums"
 import { prisma } from "../../../lib/prisma"
 import AppError from "../../errorHelpers/AppError"
 import { generateTransactionId } from "../../utils/generateTransactionId"
@@ -7,68 +7,70 @@ import { SSLService } from "../sslCommerz/sslCommerz.service"
 import { ISSLCommerz } from "../sslCommerz/sslCommerz.interface"
 
 const paymentInit = async (participantId: string) => {
-    return await prisma.$transaction(async (tx) => {
-        // 1. find the event participant
-        const isParticipantExist = await tx.eventParticipant.findUnique({
-            where: { id: participantId },
-            include: {
-                user: true,
-                event: true
-            }
-        });
+    const transactionId = generateTransactionId();
 
-        if (!isParticipantExist) {
-            throw new AppError(status.NOT_FOUND, "Participant not found");
-        }
+    const participant = await prisma.eventParticipant.findUnique({
+        where: { id: participantId },
+        include: { user: true, event: true }
+    });
 
-        if (isParticipantExist.paymentStatus === PaymentStatus.PAID) {
-            throw new AppError(status.BAD_REQUEST, "User already paid for this event!");
-        }
+    if (!participant) throw new AppError(status.NOT_FOUND, "Participant not found");
 
-        const { user, event } = isParticipantExist;
-        const transactionId = generateTransactionId();
+    if (participant.paymentStatus === PaymentStatus.PAID) {
+        throw new AppError(status.BAD_REQUEST, "User already paid!");
+    }
 
-        // 2. Check if a payment already exists (not PAID)
-        let payment = await tx.payment.findFirst({
+    // Payment create/update in transaction
+    await prisma.$transaction(async (tx) => {
+        let existing = await tx.payment.findFirst({
             where: {
-                userId: user.id,
-                eventId: event.id,
+                userId: participant.userId,
+                eventId: participant.eventId,
                 paymentStatus: { not: PaymentStatus.PAID }
             }
         });
 
-        if (payment) {
-            payment = await tx.payment.update({
-                where: { id: payment.id },
+        if (existing) {
+            await tx.payment.update({
+                where: { id: existing.id },
                 data: { transactionId, paymentStatus: PaymentStatus.PENDING }
-            })
+            });
         } else {
-            payment = await tx.payment.create({
+            await tx.payment.create({
                 data: {
-                    userId: user.id,
-                    eventId: event.id,
-                    amount: event.fee,
+                    userId: participant.userId,
+                    eventId: participant.eventId,
+                    amount: participant.event.fee,
                     transactionId,
                     paymentStatus: PaymentStatus.PENDING
                 }
             });
         }
+    }, {
+        maxWait: 5000,
+        timeout: 15000
+    });
 
-        const payload: ISSLCommerz = {
-            amount: event.fee,
-            transactionId,
-            name: user.name,
-            email: user.email,
-            phoneNumber: user.contactNumber || "N/A",
-            address: user.address || "N/A",
-        }
-        const sslPayment = await SSLService.sslPaymentInit(payload)
+    const sslPayload: ISSLCommerz = {
+        amount: participant.event.fee,
+        transactionId,
+        name: participant.user.name,
+        email: participant.user.email,
+        phoneNumber: participant.user.contactNumber ?? "N/A",
+        address: participant.user.address ?? "N/A",
+    };
 
-        return {
-            paymentUrl: sslPayment.GatewayPageURL,
-        }
-    })
-}
+    const sslPayment = await SSLService.sslPaymentInit(sslPayload);
+
+    if (!sslPayment?.GatewayPageURL) {
+        throw new AppError(status.INTERNAL_SERVER_ERROR, "Failed to initialize SSLCommerz gateway");
+    }
+
+    return {
+        paymentUrl: sslPayment.GatewayPageURL,
+    };
+};
+
 
 const successPayment = async (query: Record<string, string>) => {
     return await prisma.$transaction(async (tx) => {
@@ -93,19 +95,31 @@ const successPayment = async (query: Record<string, string>) => {
             }
         })
 
-        // 3. Increment total participants in event table
-        await tx.event.update({
+        //3. change event status based on total participants
+        const updatedEvent = await tx.event.update({
             where: { id: updatedPayment.eventId },
             data: {
                 totalParticipants: { increment: 1 },
             },
         });
 
+        if (updatedEvent.totalParticipants >= updatedEvent.maxParticipants) {
+            await tx.event.update({
+                where: { id: updatedPayment.eventId },
+                data: {
+                    status: EventStatus.FULL
+                }
+            });
+        }
+
         return {
             success: true,
             message: "Payment completed successfully!",
             updatedPayment,
         };
+    }, {
+        maxWait: 10000,
+        timeout: 20000
     })
 }
 

@@ -18,7 +18,7 @@ router.post(
 
 router.get(
     "/",
-    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
+    // checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER, UserRole.HOST),
     EventParticipantController.getAllEventParticipants
 )
 
