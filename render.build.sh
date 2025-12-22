@@ -5,11 +5,11 @@ set -o errexit
 echo "🚀 Installing dependencies..."
 pnpm install
 
-echo "📦 Building TypeScript..."
-pnpm run build
-
 echo "🛠 Generating Prisma client..."
 npx prisma generate
+
+echo "📦 Building TypeScript..."
+pnpm run build
 
 echo "🗄 Deploying Prisma migrations..."
 npx prisma migrate deploy
