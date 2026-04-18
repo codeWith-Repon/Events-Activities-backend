@@ -1,5 +1,5 @@
 import { JwtPayload } from "jsonwebtoken";
-import { Status, User } from "../../generated/prisma/client";
+import { UserStatus, User } from "../../generated/prisma/client";
 import { envVars } from "../config/env";
 import { generateToken, verifyToken } from "./jwt";
 import { prisma } from "../../lib/prisma";
@@ -37,7 +37,7 @@ export const createNewAccessTokenWitRefreshToken = async (refreshToken: string) 
 
     }
 
-    if (isUserExist.status === Status.INACTIVE || isUserExist.status === Status.BLOCKED) {
+    if (isUserExist.status === UserStatus.INACTIVE || isUserExist.status === UserStatus.BLOCKED) {
         throw new AppError(status.FORBIDDEN, `User is ${isUserExist.status}`)
     }
 

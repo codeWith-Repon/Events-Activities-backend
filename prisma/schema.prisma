@@ -1,3 +1,16 @@
+// ========================================
+// GENERATED SCHEMA - Do not edit manually!
+// ========================================
+// This file is auto-generated from /prisma/schemas/*.prisma
+// Edit the individual files in /prisma/schemas/ instead
+// Last generated: 2026-04-18T14:26:48.369Z
+//
+// To regenerate: npm run prisma:compile
+// ========================================
+
+
+// ============ From: 00-config.prisma ============
+
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
@@ -8,48 +21,12 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String    @id @default(uuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          UserRole  @default(USER)
-  isHost        Boolean   @default(false)
-  gender        Gender    @default(MALE)
-  dob           DateTime?
-  address       String?
-  contactNumber String?
-  bio           String?
-  profileImage  String?
-  status        Status    @default(ACTIVE)
-  isDeleted     Boolean   @default(false)
-  isVerified    Boolean   @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============ From: 01-enums.prisma ============
 
-  hosts             Host?
-  eventParticipants EventParticipant[]
-  payments          Payment[]
-
-  @@map("users")
-}
-
-model Host {
-  id                String @id @default(uuid())
-  userId            String @unique
-  user              User   @relation(fields: [userId], references: [id])
-  rating            Float  @default(0)
-  totalEventsHosted Int    @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  events            Event[]
-  eventParticipants EventParticipant[]
-
-  @@map("hosts")
-}
+// ========================================
+// ENUMS - All Enumeration Types
+// ========================================
 
 enum UserRole {
   SUPER_ADMIN
@@ -58,43 +35,15 @@ enum UserRole {
   HOST
 }
 
-enum Gender {
-  MALE
-  FEMALE
-}
-
-enum Status {
+enum UserStatus {
   ACTIVE
   INACTIVE
   BLOCKED
 }
 
-model Event {
-  id String @id @default(uuid())
-
-  title             String
-  slug              String      @unique
-  category          String
-  description       String
-  date              DateTime
-  time              String 
-  location          String
-  minParticipants   Int
-  maxParticipants   Int
-  totalParticipants Int         @default(0)
-  fee               Float       @default(0)
-  images            String[]
-  status            EventStatus @default(OPEN)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  host      Host     @relation(fields: [hostId], references: [id])
-  hostId    String
-
-  eventParticipants EventParticipant[]
-  payments          Payment[]
-
-  @@map("events")
+enum Gender {
+  MALE
+  FEMALE
 }
 
 enum EventStatus {
@@ -104,57 +53,11 @@ enum EventStatus {
   COMPLETED
 }
 
-model EventParticipant {
-  id String @id @default(uuid())
-
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id])
-
-  hostId String
-  host   Host   @relation(fields: [hostId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  joinStatus    JoinStatus    @default(PENDING)
-  paymentStatus PaymentStatus @default(PENDING)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([eventId, userId])
-  @@map("event_participants")
-}
-
 enum JoinStatus {
   PENDING
   APPROVED
   REJECTED
   CANCELLED
-}
-
-model Payment {
-  id String @id @default(uuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id])
-
-  amount Float
-
-  transactionId String        @unique
-  paymentStatus PaymentStatus @default(PENDING)
-
-  paymentGatewayData String?
-
-  invoiceUrl String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("payments")
 }
 
 enum PaymentStatus {
@@ -165,3 +68,189 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
+
+// ============ From: 02-user.prisma ============
+
+// ========================================
+// AUTH & USER MODELS
+// ========================================
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+
+  // Profile Information
+  role          UserRole  @default(USER)
+  gender        Gender?
+  dob           DateTime?
+  address       String?
+  contactNumber String?
+  bio           String?
+  profileImage  String?
+
+  // Account Status
+  status        UserStatus @default(ACTIVE)
+  isVerified    Boolean   @default(false)
+  isDeleted     Boolean   @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  hosts             Host?
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+
+  @@map("users")
+}
+
+model Host {
+  id                String @id @default(uuid())
+  userId            String @unique
+
+  // Host Metadata
+  rating            Float  @default(0)
+  totalEventsHosted Int    @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id])
+  events Event[]
+
+  @@map("hosts")
+}
+
+
+// ============ From: 03-event.prisma ============
+
+// ========================================
+// EVENT MODELS
+// ========================================
+
+model Event {
+  id String @id @default(uuid())
+
+  // Event Details
+  title             String
+  slug              String      @unique
+  category          String
+  description       String
+
+  // Date & Time
+  date              DateTime
+  time              String
+  location          String
+
+  // Capacity Management
+  minParticipants   Int
+  maxParticipants   Int
+
+  // Cost & Images
+  fee               Float       @default(0)
+  images            String[]
+
+  // Event Status
+  status            EventStatus @default(OPEN)
+
+  // Host Information
+  host              Host        @relation(fields: [hostId], references: [id])
+  hostId            String
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+
+  // Indexes for common queries
+  @@index([status])
+  @@index([category])
+  @@index([hostId])
+  @@index([createdAt])
+  @@map("events")
+}
+
+model EventParticipant {
+  id String @id @default(uuid())
+
+  // Event & User Reference
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Participation Status
+  joinStatus    JoinStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments Payment[]
+
+  // Constraints: prevent duplicate participation
+  @@unique([eventId, userId])
+  @@index([joinStatus])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("event_participants")
+}
+
+
+// ============ From: 04-payment.prisma ============
+
+// ========================================
+// PAYMENT MODELS
+// ========================================
+
+model Payment {
+  id String @id @default(uuid())
+
+  // Participant Reference
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  participant    EventParticipant? @relation(fields: [participantId], references: [id])
+  participantId  String?
+
+  // Payment Details
+  amount Float
+
+  // Transaction Information
+  transactionId      String        @unique
+  paymentStatus      PaymentStatus @default(PENDING)
+  paymentGatewayData String?       // SSLCommerz response data
+  invoiceUrl         String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes for payment lookups
+  @@index([transactionId])
+  @@index([paymentStatus])
+  @@index([participantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+
+// ========================================
+// End of compiled schema
+// ========================================

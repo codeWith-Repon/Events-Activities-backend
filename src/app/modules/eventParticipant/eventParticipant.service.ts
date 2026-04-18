@@ -51,72 +51,37 @@ const createEventParticipant = async (
             throw new AppError(status.BAD_REQUEST, "Already joined this event");
 
 
-        // check user isHost status
-        const user = await tx.user.findUnique({
-            where: {
-                id: userId
-            }
-        })
         const isFree = existsEvent.fee === 0
-
-        if (user?.isHost) {
-            await tx.user.update({
-                where: {
-                    id: userId
-                },
-                data: {
-                    isHost: false
-                }
-            })
-        }
 
         // Create event participant
         const eventParticipant = await tx.eventParticipant.create({
             data: {
                 userId,
                 eventId: payload.eventId,
-                hostId: existsEvent.hostId,
                 joinStatus: isFree ? JoinStatus.APPROVED : JoinStatus.PENDING,
                 paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
             }
         });
 
-        // Update total participants
-
         if (isFree) {
+            const approvedCount = await tx.eventParticipant.count({
+                where: { eventId: existsEvent.id, joinStatus: JoinStatus.APPROVED }
+            });
 
-            if (existsEvent.totalParticipants >= existsEvent.maxParticipants) {
-                throw new AppError(status.BAD_REQUEST, "Event is already full");
-            }
-
-            const updatedEvent = await tx.event.update({
-                where: {
-                    id: existsEvent.id,
-                },
-                data: {
-                    totalParticipants: {
-                        increment: 1
-                    }
-                }
-            })
-
-            if (updatedEvent.totalParticipants === updatedEvent.maxParticipants) {
+            if (approvedCount >= existsEvent.maxParticipants) {
                 await tx.event.update({
-                    where: {
-                        id: existsEvent.id,
-                    },
-                    data: {
-                        status: EventStatus.FULL
-                    }
-                })
+                    where: { id: existsEvent.id },
+                    data: { status: EventStatus.FULL }
+                });
             }
         }
 
-        // Create payment safely
+        // Create payment record for paid events
         if (!isFree) await tx.payment.create({
             data: {
                 userId,
                 eventId: payload.eventId,
+                participantId: eventParticipant.id,
                 amount: existsEvent.fee,
                 transactionId: transactionId,
             }
@@ -208,7 +173,7 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
             event: {
                 select: {
                     id: true,
-                    title: true, slug: true, description: true, date: true, time: true, location: true, minParticipants: true, maxParticipants: true, images: true, fee: true, category: true, status: true, totalParticipants: true, hostId: true, host: {
+                    title: true, slug: true, description: true, date: true, time: true, location: true, minParticipants: true, maxParticipants: true, images: true, fee: true, category: true, status: true, hostId: true, host: {
                         include: {
                             user: {
                                 select: {
@@ -240,8 +205,14 @@ const getEventParticipantById = async (id: string) => {
         where: { id },
         include: {
             user: { select: { name: true, email: true, profileImage: true, role: true } },
-            event: { select: { title: true, description: true, date: true, time: true, location: true, fee: true, images: true, minParticipants: true, maxParticipants: true, totalParticipants: true, category: true, status: true } },
-            host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
+            event: {
+                select: {
+                    title: true, description: true, date: true, time: true, location: true,
+                    fee: true, images: true, minParticipants: true, maxParticipants: true,
+                    category: true, status: true,
+                    host: { include: { user: { select: { name: true, email: true, profileImage: true } } } }
+                }
+            },
         },
     });
 
@@ -290,12 +261,8 @@ const updateEventParticipantById = async (
                 }
             })
 
-            // Find the payment record for this participant and event
             const payment = await tx.payment.findFirst({
-                where: {
-                    userId: decodedToken.userId,
-                    eventId: isParticipantExist.eventId
-                }
+                where: { participantId: eventParticipantId }
             });
 
             if (!payment) {
@@ -325,7 +292,8 @@ const updateEventParticipantById = async (
             throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
         }
 
-        if (isHostExist.id !== isParticipantExist.hostId) {
+        const participantEvent = await tx.event.findUnique({ where: { id: isParticipantExist.eventId } });
+        if (!participantEvent || isHostExist.id !== participantEvent.hostId) {
             throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
         }
 
@@ -337,12 +305,8 @@ const updateEventParticipantById = async (
             }
         })
 
-        // Find the payment record for this participant and event
         const payment = await tx.payment.findFirst({
-            where: {
-                eventId: isParticipantExist.eventId,
-                userId: decodedToken.userId
-            }
+            where: { participantId: eventParticipantId }
         });
 
         if (payment) {
@@ -380,7 +344,8 @@ const deleteEventParticipantById = async (id: string, decodedToken: JwtPayload) 
         throw new AppError(status.NOT_FOUND, "Event participant not found");
     }
 
-    if (isHostExist.id !== isParticipantExist.hostId) {
+    const participantEvent = await prisma.event.findUnique({ where: { id: isParticipantExist.eventId } });
+    if (!participantEvent || isHostExist.id !== participantEvent.hostId) {
         throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
     }
 

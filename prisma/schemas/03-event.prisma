@@ -1,0 +1,77 @@
+// ========================================
+// EVENT MODELS
+// ========================================
+
+model Event {
+  id String @id @default(uuid())
+
+  // Event Details
+  title             String
+  slug              String      @unique
+  category          String
+  description       String
+
+  // Date & Time
+  date              DateTime
+  time              String
+  location          String
+
+  // Capacity Management
+  minParticipants   Int
+  maxParticipants   Int
+
+  // Cost & Images
+  fee               Float       @default(0)
+  images            String[]
+
+  // Event Status
+  status            EventStatus @default(OPEN)
+
+  // Host Information
+  host              Host        @relation(fields: [hostId], references: [id])
+  hostId            String
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+
+  // Indexes for common queries
+  @@index([status])
+  @@index([category])
+  @@index([hostId])
+  @@index([createdAt])
+  @@map("events")
+}
+
+model EventParticipant {
+  id String @id @default(uuid())
+
+  // Event & User Reference
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Participation Status
+  joinStatus    JoinStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments Payment[]
+
+  // Constraints: prevent duplicate participation
+  @@unique([eventId, userId])
+  @@index([joinStatus])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("event_participants")
+}

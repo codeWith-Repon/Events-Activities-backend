@@ -27,14 +27,7 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
     return await prisma.$transaction(async (tx) => {
 
-        if (!user.isHost) {
-            await tx.user.update({
-                where: { id: userId },
-                data: { isHost: true }
-            })
-        }
-        // 3. convert USER -> HOST
-        // Admin / super admin role not touch 
+        // convert USER -> HOST role (admin/super_admin roles not changed)
         if (user.role === UserRole.USER) {
             await tx.user.update({
                 where: { id: userId },

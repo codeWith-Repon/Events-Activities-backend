@@ -1,0 +1,44 @@
+// ========================================
+// ENUMS - All Enumeration Types
+// ========================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  HOST
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EventStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+enum JoinStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REJECTED
+  FAILED
+  REFUNDED
+}

@@ -24,8 +24,7 @@ const paymentInit = async (participantId: string) => {
     await prisma.$transaction(async (tx) => {
         let existing = await tx.payment.findFirst({
             where: {
-                userId: participant.userId,
-                eventId: participant.eventId,
+                participantId,
                 paymentStatus: { not: PaymentStatus.PAID }
             }
         });
@@ -40,6 +39,7 @@ const paymentInit = async (participantId: string) => {
                 data: {
                     userId: participant.userId,
                     eventId: participant.eventId,
+                    participantId,
                     amount: participant.event.fee,
                     transactionId,
                     paymentStatus: PaymentStatus.PENDING
@@ -95,20 +95,18 @@ const successPayment = async (query: Record<string, string>) => {
             }
         })
 
-        //3. change event status based on total participants
-        const updatedEvent = await tx.event.update({
-            where: { id: updatedPayment.eventId },
-            data: {
-                totalParticipants: { increment: 1 },
-            },
+        // Mark event FULL if approved participants reached max
+        const approvedCount = await tx.eventParticipant.count({
+            where: { eventId: updatedPayment.eventId, joinStatus: JoinStatus.APPROVED }
         });
-
-        if (updatedEvent.totalParticipants >= updatedEvent.maxParticipants) {
+        const event = await tx.event.findUnique({
+            where: { id: updatedPayment.eventId },
+            select: { maxParticipants: true }
+        });
+        if (event && approvedCount >= event.maxParticipants) {
             await tx.event.update({
                 where: { id: updatedPayment.eventId },
-                data: {
-                    status: EventStatus.FULL
-                }
+                data: { status: EventStatus.FULL }
             });
         }
 

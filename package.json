@@ -7,8 +7,11 @@
     "dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "postinstall": "prisma generate",
-    "migrate": "prisma migrate deploy",
+    "prisma:compile": "node prisma/compile-schema.js",
+    "prisma:generate": "npm run prisma:compile && prisma generate",
+    "prisma:migrate": "npm run prisma:compile && prisma migrate dev",
+    "postinstall": "npm run prisma:generate",
+    "migrate": "npm run prisma:migrate && prisma migrate deploy",
     "lint": "npx eslint ./src"
   },
   "keywords": [],

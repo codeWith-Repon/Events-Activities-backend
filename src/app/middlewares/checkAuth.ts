@@ -4,7 +4,7 @@ import { verifyToken } from "../utils/jwt";
 import { envVars } from "../config/env";
 import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
-import { Status } from "../../generated/prisma/enums";
+import { UserStatus } from "../../generated/prisma/enums";
 import status from "http-status";
 
 export const checkAuth = (...authRoles: string[]) => async (req: Request, res: Response, next: NextFunction) => {
@@ -28,7 +28,7 @@ export const checkAuth = (...authRoles: string[]) => async (req: Request, res: R
         //     throw new AppError(status.BAD_REQUEST, "User is not verified")
         // }
 
-        if (isUserExist.status === Status.INACTIVE || isUserExist.status === Status.BLOCKED) {
+        if (isUserExist.status === UserStatus.INACTIVE || isUserExist.status === UserStatus.BLOCKED) {
             throw new AppError(status.FORBIDDEN, `User is ${isUserExist.status}`)
         }
 
