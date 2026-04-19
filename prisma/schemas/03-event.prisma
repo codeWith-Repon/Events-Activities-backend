@@ -38,6 +38,7 @@ model Event {
   // Relations
   eventParticipants EventParticipant[]
   payments          Payment[]
+  ratings           Rating[]
 
   // Indexes for common queries
   @@index([status])
@@ -67,6 +68,7 @@ model EventParticipant {
 
   // Relations
   payments Payment[]
+  rating   Rating?
 
   // Constraints: prevent duplicate participation
   @@unique([eventId, userId])

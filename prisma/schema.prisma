@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-18T14:26:48.369Z
+// Last generated: 2026-04-18T14:58:24.554Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -104,6 +104,7 @@ model User {
   hosts             Host?
   eventParticipants EventParticipant[]
   payments          Payment[]
+  ratings           Rating[] @relation("RatingsGiven")
 
   @@map("users")
 }
@@ -170,6 +171,7 @@ model Event {
   // Relations
   eventParticipants EventParticipant[]
   payments          Payment[]
+  ratings           Rating[]
 
   // Indexes for common queries
   @@index([status])
@@ -199,6 +201,7 @@ model EventParticipant {
 
   // Relations
   payments Payment[]
+  rating   Rating?
 
   // Constraints: prevent duplicate participation
   @@unique([eventId, userId])
@@ -248,6 +251,45 @@ model Payment {
   @@index([userId])
   @@index([createdAt])
   @@map("payments")
+}
+
+
+// ============ From: 05-rating.prisma ============
+
+// ========================================
+// RATING MODELS
+// ========================================
+
+model Rating {
+  id String @id @default(uuid())
+
+  // Relations - Event participation being rated
+  eventParticipant    EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId       String           @unique // One rating per participation
+
+  // Relations - The event being rated
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  // Relations - The person giving the rating
+  rater   User   @relation("RatingsGiven", fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  // Rating Data
+  rating Int     // 1-5 stars
+  review String? // Optional text review (max 500 chars enforced in validation)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Constraints & Indexes
+  @@unique([eventId, userId])  // One rating per user per event
+  @@index([userId])            // Find ratings by user
+  @@index([eventId])           // Find ratings for event
+  @@index([rating])            // Filter by rating value
+  @@index([createdAt])         // Sort by recency
+  @@map("ratings")
 }
 
 

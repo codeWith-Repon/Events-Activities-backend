@@ -1,2 +1,28 @@
 fix/database
 
+Core Features
+
+Event Reviews & Ratings — participants rate events after completion
+Waitlist System — auto-approve when a spot opens up
+Event Invitations — host invites specific users via email/link
+Recurring Events — weekly/monthly event scheduling
+Social Features
+5. Follow System — follow hosts, get notified of their new events
+6. Event Comments/Discussion — public Q&A thread per event
+7. Share & Referral Links — track who referred participants
+
+Host Tools
+8. Attendance Check-in — QR code scan on event day
+9. Coupon/Discount Codes — percentage or flat discount on fees
+10. Event Analytics — per-event stats for hosts (views, joins, revenue)
+11. Co-host Support — assign multiple hosts to one event
+
+User Experience
+12. Notification System — in-app + email alerts (event reminders, approval updates)
+13. Saved/Bookmarked Events — wishlist before joining
+14. Personalized Feed — recommend events based on past activity
+
+Admin Power
+15. Host Verification Badge — admins verify trusted hosts
+16. Report & Moderation — users report suspicious events
+17. Refund Management — admin-controlled refund workflow

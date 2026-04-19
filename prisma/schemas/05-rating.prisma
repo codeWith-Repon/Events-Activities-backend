@@ -1,0 +1,35 @@
+// ========================================
+// RATING MODELS
+// ========================================
+
+model Rating {
+  id String @id @default(uuid())
+
+  // Relations - Event participation being rated
+  eventParticipant    EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId       String           @unique // One rating per participation
+
+  // Relations - The event being rated
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  // Relations - The person giving the rating
+  rater   User   @relation("RatingsGiven", fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  // Rating Data
+  rating Int     // 1-5 stars
+  review String? // Optional text review (max 500 chars enforced in validation)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Constraints & Indexes
+  @@unique([eventId, userId])  // One rating per user per event
+  @@index([userId])            // Find ratings by user
+  @@index([eventId])           // Find ratings for event
+  @@index([rating])            // Filter by rating value
+  @@index([createdAt])         // Sort by recency
+  @@map("ratings")
+}
