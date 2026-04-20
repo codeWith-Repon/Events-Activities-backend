@@ -26,6 +26,7 @@ model Event {
 
   // Event Status
   status            EventStatus @default(OPEN)
+  viewCount         Int         @default(0)
 
   // Host Information
   host              Host        @relation(fields: [hostId], references: [id])
