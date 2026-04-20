@@ -1,97 +1,3 @@
----
-lockfileVersion: '9.0'
-
-importers:
-
-  .:
-    configDependencies: {}
-    packageManagerDependencies:
-      '@pnpm/exe':
-        specifier: 10.15.1
-        version: 10.15.1
-      pnpm:
-        specifier: 10.15.1
-        version: 10.15.1
-
-packages:
-
-  '@pnpm/exe@10.15.1':
-    resolution: {integrity: sha512-jQiNZqxCQ4OjWXFNz2Wx8PCZy/obt3pOMDjC7dC1HmhVAntgP/phls6MMdxIGJuT/WMeBtpA1a2eUcKxaMn8jw==}
-    hasBin: true
-
-  '@pnpm/linux-arm64@10.15.1':
-    resolution: {integrity: sha512-GuX0NyJa7K3beBklRUfWqFPO9jlTFKhi/7F5ai1xnSv99DBUNRs/h1XCPzrHOGM4R/qXk6Tq60uSNJ62COtpHg==}
-    cpu: [arm64]
-    os: [linux]
-    hasBin: true
-
-  '@pnpm/linux-x64@10.15.1':
-    resolution: {integrity: sha512-YQnaIyNGTjgTIzPB1x5Mcfs6usNVY5ZS+WURwpF6+oOe3FYGg4AVcPFkkes/o/ReWigjm+snLSe+g6sX7xsihg==}
-    cpu: [x64]
-    os: [linux]
-    hasBin: true
-
-  '@pnpm/macos-arm64@10.15.1':
-    resolution: {integrity: sha512-VsinUkR1E97nzs0dVNr7NacmGWDXVBYaGO13VTrujnv1sOvlJME0p4ZuBeYymN3rHLsHjkoiJkTrJ7Zyv43ztQ==}
-    cpu: [arm64]
-    os: [darwin]
-    hasBin: true
-
-  '@pnpm/macos-x64@10.15.1':
-    resolution: {integrity: sha512-Xb9labY1Uk9rONbbvpuZQud8bGIVmTi+1Z8B01971iBv3NOfOqg+anYdvHb8G7/AY7L2s9b+bfcbIETOnYoR3g==}
-    cpu: [x64]
-    os: [darwin]
-    hasBin: true
-
-  '@pnpm/win-arm64@10.15.1':
-    resolution: {integrity: sha512-JbshKVraXh6c+LgiR7Baf9vYgnx7ku0LKDSxLI9rSu4sdh9zbQFdI5kmJRCXka4QVQCsKDhZDT/WE+YCdeTWwQ==}
-    cpu: [arm64]
-    os: [win32]
-    hasBin: true
-
-  '@pnpm/win-x64@10.15.1':
-    resolution: {integrity: sha512-Hdw1g5k0FQE+0LHjrWnHzeAqYlHlVcBOdwR1dYnIfrq9Iui744Rf9qPmVmMIaCwS8WpNwPy3uJ1l/L6fZ4WNIA==}
-    cpu: [x64]
-    os: [win32]
-    hasBin: true
-
-  pnpm@10.15.1:
-    resolution: {integrity: sha512-NOU4wym1VTAUyo6PRTWZf5YYCh0PYUM5NXRJk1NQ2STiL4YUaCGRJk7DPRRirCFWGv+X9rsYBlNRwWLH6PbeZw==}
-    engines: {node: '>=18.12'}
-    hasBin: true
-
-snapshots:
-
-  '@pnpm/exe@10.15.1':
-    optionalDependencies:
-      '@pnpm/linux-arm64': 10.15.1
-      '@pnpm/linux-x64': 10.15.1
-      '@pnpm/macos-arm64': 10.15.1
-      '@pnpm/macos-x64': 10.15.1
-      '@pnpm/win-arm64': 10.15.1
-      '@pnpm/win-x64': 10.15.1
-
-  '@pnpm/linux-arm64@10.15.1':
-    optional: true
-
-  '@pnpm/linux-x64@10.15.1':
-    optional: true
-
-  '@pnpm/macos-arm64@10.15.1':
-    optional: true
-
-  '@pnpm/macos-x64@10.15.1':
-    optional: true
-
-  '@pnpm/win-arm64@10.15.1':
-    optional: true
-
-  '@pnpm/win-x64@10.15.1':
-    optional: true
-
-  pnpm@10.15.1: {}
-
----
 lockfileVersion: '9.0'
 
 settings:
@@ -147,6 +53,9 @@ importers:
       multer-storage-cloudinary:
         specifier: ^4.0.0
         version: 4.0.0(cloudinary@2.9.0)
+      nodemailer:
+        specifier: ^8.0.5
+        version: 8.0.5
       pg:
         specifier: ^8.16.3
         version: 8.20.0
@@ -175,6 +84,9 @@ importers:
       '@types/node':
         specifier: ^24.10.1
         version: 24.12.2
+      '@types/nodemailer':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@types/pg':
         specifier: ^8.15.6
         version: 8.20.0
@@ -422,6 +334,9 @@ packages:
 
   '@types/node@24.12.2':
     resolution: {integrity: sha512-A1sre26ke7HDIuY/M23nd9gfB+nrmhtYyMINbjI1zHJxYteKR6qSMX56FsmjMcDb3SMcjJg5BiRRgOCC/yBD0g==}
+
+  '@types/nodemailer@8.0.0':
+    resolution: {integrity: sha512-fyf8jWULsCo0d0BuoQ75i6IeoHs47qcqxWc7yUdUcV0pOZGjUTTOvwdG1PRXUDqN/8A64yQdQdnA2pZgcdi+cA==}
 
   '@types/pg@8.20.0':
     resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
@@ -1023,6 +938,10 @@ packages:
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
+
+  nodemailer@8.0.5:
+    resolution: {integrity: sha512-0PF8Yb1yZuQfQbq+5/pZJrtF6WQcjTd5/S4JOHs9PGFxuTqoB/icwuB44pOdURHJbRKX1PPoJZtY7R4VUoCC8w==}
+    engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -1708,6 +1627,10 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
+  '@types/nodemailer@8.0.0':
+    dependencies:
+      '@types/node': 24.12.2
+
   '@types/pg@8.20.0':
     dependencies:
       '@types/node': 24.12.2
@@ -2316,6 +2239,8 @@ snapshots:
   negotiator@1.0.0: {}
 
   node-fetch-native@1.6.7: {}
+
+  nodemailer@8.0.5: {}
 
   normalize-path@3.0.0: {}
 

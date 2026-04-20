@@ -8,6 +8,13 @@ interface EnvConfig {
     NODE_ENV: "development" | "production",
     FRONTEND_URL: string,
     FRONTEND_LIVE_URL: string,
+    SMTP: {
+        HOST?: string,
+        PORT?: string,
+        USER?: string,
+        PASS?: string,
+        FROM?: string
+    },
     BCRYPT_SALT_ROUND: string,
     SUPER_ADMIN_NAME: string,
     SUPER_ADMIN_EMAIL: string,
@@ -78,6 +85,13 @@ const loadEnvVariable = (): EnvConfig => {
         NODE_ENV: process.env.NODE_ENV as "development" | "production",
         FRONTEND_URL: process.env.FRONTEND_URL!,
         FRONTEND_LIVE_URL: process.env.FRONTEND_LIVE_URL!,
+        SMTP: {
+            HOST: process.env.SMTP_HOST,
+            PORT: process.env.SMTP_PORT,
+            USER: process.env.SMTP_USER,
+            PASS: process.env.SMTP_PASS,
+            FROM: process.env.SMTP_FROM
+        },
         BCRYPT_SALT_ROUND: process.env.BCRYPT_SALT_ROUND!,
         SUPER_ADMIN_NAME: process.env.SUPER_ADMIN_NAME!,
         SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL!,
