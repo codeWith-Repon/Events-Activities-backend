@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T07:36:38.233Z
+// Last generated: 2026-04-20T07:49:36.401Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -215,6 +215,11 @@ model EventParticipant {
   joinStatus    JoinStatus    @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
   reminderSent  Boolean       @default(false)
+
+  // Attendance
+  checkInToken  String?   @unique
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
 
   // Timestamps
   createdAt DateTime @default(now())

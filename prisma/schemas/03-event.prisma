@@ -64,6 +64,11 @@ model EventParticipant {
   paymentStatus PaymentStatus @default(PENDING)
   reminderSent  Boolean       @default(false)
 
+  // Attendance
+  checkInToken  String?   @unique
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
