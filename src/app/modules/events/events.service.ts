@@ -1,6 +1,8 @@
 import { JwtPayload } from "jsonwebtoken"
 import { prisma } from "../../../lib/prisma";
-import { Event, JoinStatus, Prisma, User, UserRole } from "../../../generated/prisma/client";
+import { Event, EventStatus, JoinStatus, NotificationType, Prisma, User, UserRole } from "../../../generated/prisma/client";
+import { notify } from "../notification/notification.service";
+import { buildEventCancelledEmail } from "../../utils/emailTemplates";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { generateSlug } from "../../utils/generateSlug";
@@ -238,14 +240,22 @@ const updateEvent = async (
 
 
     const updatedEvent = await prisma.event.update({
-        where: {
-            slug
-        },
+        where: { slug },
         data: prismaPayload
-    })
+    });
 
+    // Notify all approved participants when event is cancelled
+    if (payload.status === EventStatus.CANCELLED) {
+        const participants = await prisma.eventParticipant.findMany({
+            where: { eventId: updatedEvent.id, joinStatus: JoinStatus.APPROVED },
+            select: { userId: true }
+        });
+        participants.forEach(({ userId }) => {
+            notify({ userId, type: NotificationType.EVENT_CANCELLED, title: "Event cancelled", message: `"${updatedEvent.title}" has been cancelled by the host.`, emailHtml: buildEventCancelledEmail(updatedEvent.title) });
+        });
+    }
 
-    return updatedEvent
+    return updatedEvent;
 }
 
 const deleteEvent = async (slug: string, decodedToken: JwtPayload) => {

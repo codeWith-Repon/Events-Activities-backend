@@ -6,7 +6,8 @@ import status from "http-status";
 import { EventStatus, InvitationStatus, JoinStatus, PaymentStatus } from "../../../generated/prisma/client";
 import { ISendInvitation } from "./invitation.interface";
 import { INVITATION_EXPIRY_DAYS } from "./invitation.constants";
-import { sendEmail, buildInvitationEmail } from "../../utils/sendEmail";
+import { sendEmail } from "../../utils/sendEmail";
+import { buildInvitationEmail } from "../../utils/emailTemplates";
 import { envVars } from "../../config/env";
 
 const sendInvitation = async (payload: ISendInvitation, decodedToken: JwtPayload) => {

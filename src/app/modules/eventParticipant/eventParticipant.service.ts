@@ -2,10 +2,17 @@ import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
-import { EventParticipant, EventStatus, JoinStatus, PaymentStatus, Prisma } from "../../../generated/prisma/client";
+import { EventParticipant, EventStatus, JoinStatus, NotificationType, PaymentStatus, Prisma } from "../../../generated/prisma/client";
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
+import { notify } from "../notification/notification.service";
+import {
+    buildApprovalEmail,
+    buildRejectionEmail,
+    buildWaitlistedEmail,
+    buildWaitlistPromotedEmail
+} from "../../utils/emailTemplates";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -62,7 +69,7 @@ const createEventParticipant = async (
                     paymentStatus: PaymentStatus.PENDING
                 }
             });
-            return waitlisted;
+            return { participant: waitlisted, eventTitle: existsEvent.title, joinStatus: JoinStatus.WAITLISTED };
         }
 
         // Create event participant
@@ -98,10 +105,17 @@ const createEventParticipant = async (
                 transactionId: transactionId,
             }
         });
-        return eventParticipant;
+        return { participant: eventParticipant, eventTitle: existsEvent.title, joinStatus: eventParticipant.joinStatus };
     });
 
-    return result
+    // Fire notification after transaction (non-blocking)
+    if (result.joinStatus === JoinStatus.APPROVED) {
+        notify({ userId, type: NotificationType.PARTICIPANT_APPROVED, title: "You're in!", message: `Your spot for "${result.eventTitle}" has been confirmed.`, emailHtml: buildApprovalEmail(result.eventTitle) });
+    } else if (result.joinStatus === JoinStatus.WAITLISTED) {
+        notify({ userId, type: NotificationType.PARTICIPANT_WAITLISTED, title: "Added to waitlist", message: `You're on the waitlist for "${result.eventTitle}".`, emailHtml: buildWaitlistedEmail(result.eventTitle) });
+    }
+
+    return result.participant;
 };
 
 const getAllEventParticipants = async (filters: any, options: IOptions) => {
@@ -235,7 +249,10 @@ const getEventParticipantById = async (id: string) => {
     return participant;
 };
 
-const autoApproveNextWaitlisted = async (eventId: string, tx: any) => {
+const autoApproveNextWaitlisted = async (
+    eventId: string,
+    tx: any
+): Promise<{ promotedUserId?: string; eventTitle?: string }> => {
     const nextWaitlisted = await tx.eventParticipant.findFirst({
         where: { eventId, joinStatus: JoinStatus.WAITLISTED },
         orderBy: { createdAt: "asc" }
@@ -246,7 +263,7 @@ const autoApproveNextWaitlisted = async (eventId: string, tx: any) => {
             where: { id: eventId },
             data: { status: EventStatus.OPEN }
         });
-        return;
+        return {};
     }
 
     const event = await tx.event.findUnique({ where: { id: eventId } });
@@ -260,6 +277,7 @@ const autoApproveNextWaitlisted = async (eventId: string, tx: any) => {
         }
     });
     // event stays FULL — one left, one approved
+    return { promotedUserId: nextWaitlisted.userId, eventTitle: event.title };
 };
 
 const updateEventParticipantById = async (
@@ -267,7 +285,7 @@ const updateEventParticipantById = async (
     decodedToken: JwtPayload,
     payload: Partial<EventParticipant>
 ) => {
-    return prisma.$transaction(async (tx) => {
+    const { participant, notifyTarget, promoted } = await prisma.$transaction(async (tx) => {
         // 1. find the event participant
         const isParticipantExist = await prisma.eventParticipant.findUnique({
             where: { id: eventParticipantId },
@@ -277,60 +295,34 @@ const updateEventParticipantById = async (
             throw new AppError(status.NOT_FOUND, "Participant not found");
         }
 
-        // 2. user can cancel his own participant status
-        const isUserExist = await tx.user.findUnique({
-            where: {
-                id: decodedToken.userId
-            }
-        })
+        // 2. user cancels their own participation
+        const isUserExist = await tx.user.findUnique({ where: { id: decodedToken.userId } });
+        if (!isUserExist) throw new AppError(status.NOT_FOUND, "User not found");
 
-        if (!isUserExist) {
-            throw new AppError(status.NOT_FOUND, "User not found");
-        }
-
-        if (
-            isUserExist.id === isParticipantExist.userId
-            && payload.joinStatus === JoinStatus.CANCELLED
-        ) {
+        if (isUserExist.id === isParticipantExist.userId && payload.joinStatus === JoinStatus.CANCELLED) {
             const prevJoinStatus = isParticipantExist.joinStatus;
 
-            const updatedParticipant = await tx.eventParticipant.update({
+            const updated = await tx.eventParticipant.update({
                 where: { id: eventParticipantId },
-                data: {
-                    joinStatus: JoinStatus.CANCELLED,
-                    paymentStatus: PaymentStatus.CANCELLED
-                }
+                data: { joinStatus: JoinStatus.CANCELLED, paymentStatus: PaymentStatus.CANCELLED }
             });
 
-            const payment = await tx.payment.findFirst({
-                where: { participantId: eventParticipantId }
-            });
-
+            const payment = await tx.payment.findFirst({ where: { participantId: eventParticipantId } });
             if (payment) {
-                await tx.payment.update({
-                    where: { id: payment.id },
-                    data: { paymentStatus: PaymentStatus.CANCELLED }
-                });
+                await tx.payment.update({ where: { id: payment.id }, data: { paymentStatus: PaymentStatus.CANCELLED } });
             }
 
-            // Only open a waitlist spot when an APPROVED participant cancels
+            let promoted = {};
             if (prevJoinStatus === JoinStatus.APPROVED) {
-                await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
+                promoted = await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
             }
 
-            return updatedParticipant;
+            return { participant: updated, notifyTarget: null, promoted };
         }
 
-        // 3. host can update participant status -> reject
-        const isHostExist = await tx.host.findUnique({
-            where: {
-                userId: decodedToken.userId
-            }
-        })
-
-        if (!isHostExist) {
-            throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
-        }
+        // 3. host rejects a participant
+        const isHostExist = await tx.host.findUnique({ where: { userId: decodedToken.userId } });
+        if (!isHostExist) throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
 
         const participantEvent = await tx.event.findUnique({ where: { id: isParticipantExist.eventId } });
         if (!participantEvent || isHostExist.id !== participantEvent.hostId) {
@@ -339,32 +331,38 @@ const updateEventParticipantById = async (
 
         const prevJoinStatus = isParticipantExist.joinStatus;
 
-        const updatedParticipantStatus = await tx.eventParticipant.update({
+        const updated = await tx.eventParticipant.update({
             where: { id: eventParticipantId },
-            data: {
-                ...payload,
-                paymentStatus: PaymentStatus.REJECTED
-            }
+            data: { ...payload, paymentStatus: PaymentStatus.REJECTED }
         });
 
-        const payment = await tx.payment.findFirst({
-            where: { participantId: eventParticipantId }
-        });
-
+        const payment = await tx.payment.findFirst({ where: { participantId: eventParticipantId } });
         if (payment) {
-            await tx.payment.update({
-                where: { id: payment.id },
-                data: { paymentStatus: PaymentStatus.REJECTED }
-            });
+            await tx.payment.update({ where: { id: payment.id }, data: { paymentStatus: PaymentStatus.REJECTED } });
         }
 
-        // Free up the spot if an APPROVED participant was rejected
+        let promoted = {};
         if (prevJoinStatus === JoinStatus.APPROVED) {
-            await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
+            promoted = await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
         }
 
-        return updatedParticipantStatus;
-    })
+        return {
+            participant: updated,
+            notifyTarget: { userId: isParticipantExist.userId, eventTitle: participantEvent.title },
+            promoted
+        };
+    });
+
+    // Fire notifications outside the transaction (non-blocking)
+    if (notifyTarget) {
+        notify({ userId: notifyTarget.userId, type: NotificationType.PARTICIPANT_REJECTED, title: "Request not approved", message: `Your request for "${notifyTarget.eventTitle}" was not approved.`, emailHtml: buildRejectionEmail(notifyTarget.eventTitle) });
+    }
+    const { promotedUserId, eventTitle } = promoted as { promotedUserId?: string; eventTitle?: string };
+    if (promotedUserId && eventTitle) {
+        notify({ userId: promotedUserId, type: NotificationType.WAITLIST_PROMOTED, title: "Spot opened up!", message: `You've been approved from the waitlist for "${eventTitle}".`, emailHtml: buildWaitlistPromotedEmail(eventTitle) });
+    }
+
+    return participant;
 };
 
 const deleteEventParticipantById = async (id: string, decodedToken: JwtPayload) => {
