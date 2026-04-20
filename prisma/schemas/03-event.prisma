@@ -26,6 +26,7 @@ model Event {
 
   // Event Status
   status            EventStatus @default(OPEN)
+  reminderSent      Boolean     @default(false)
 
   // Host Information
   host              Host        @relation(fields: [hostId], references: [id])

@@ -30,7 +30,8 @@ model User {
   hosts             Host?
   eventParticipants EventParticipant[]
   payments          Payment[]
-  ratings           Rating[] @relation("RatingsGiven")
+  ratings           Rating[]         @relation("RatingsGiven")
+  notifications     Notification[]
 
   @@map("users")
 }

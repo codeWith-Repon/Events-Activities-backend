@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T05:12:44.684Z
+// Last generated: 2026-04-20T05:55:03.252Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -77,6 +77,15 @@ enum InvitationStatus {
   REVOKED
 }
 
+enum NotificationType {
+  EVENT_REMINDER
+  PARTICIPANT_APPROVED
+  PARTICIPANT_REJECTED
+  PARTICIPANT_WAITLISTED
+  WAITLIST_PROMOTED
+  EVENT_CANCELLED
+}
+
 
 // ============ From: 02-user.prisma ============
 
@@ -112,7 +121,8 @@ model User {
   hosts             Host?
   eventParticipants EventParticipant[]
   payments          Payment[]
-  ratings           Rating[] @relation("RatingsGiven")
+  ratings           Rating[]         @relation("RatingsGiven")
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -168,6 +178,7 @@ model Event {
 
   // Event Status
   status            EventStatus @default(OPEN)
+  reminderSent      Boolean     @default(false)
 
   // Host Information
   host              Host        @relation(fields: [hostId], references: [id])
@@ -338,6 +349,32 @@ model EventInvitation {
   @@index([eventId])
   @@index([status])
   @@map("event_invitations")
+}
+
+
+// ============ From: 07-notification.prisma ============
+
+// ========================================
+// NOTIFICATION MODEL
+// ========================================
+
+model Notification {
+  id      String @id @default(uuid())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 
