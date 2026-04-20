@@ -23,7 +23,7 @@ Send credentials via cookies. For non-browser clients, pass `Authorization: Bear
 
 ```json
 // Request
-{ "email": "user@example.com", "password": "min6chars" }
+{ "email": "user@example.com", "password": "string" }
 
 // Response
 {
@@ -36,6 +36,13 @@ Send credentials via cookies. For non-browser clients, pass `Authorization: Bear
 }
 ```
 > Sets `accessToken` and `refreshToken` HTTP-only cookies.
+
+**Error cases:**
+| Status | Reason |
+|--------|--------|
+| `400`  | User not found |
+| `400`  | Invalid password |
+| `403`  | Account is blocked |
 
 ---
 
@@ -56,7 +63,10 @@ No body required. Returns new access + refresh tokens and resets cookies.
 ### `POST /auth/reset-password`
 **Auth required (any role)**
 
+Resets password for the currently logged-in user.
+
 ```json
+// Request
 { "newPassword": "min6chars" }
 ```
 
@@ -65,9 +75,51 @@ No body required. Returns new access + refresh tokens and resets cookies.
 ### `POST /auth/change-password`
 **Auth required (any role)**
 
+Changes password by verifying the current one first.
+
 ```json
-{ "currentPassword": "string", "newPassword": "string" }
+// Request
+{ "oldPassword": "string", "newPassword": "min6chars" }
 ```
+
+---
+
+### `POST /auth/forgot-password`
+**Public**
+
+Sends a password reset link to the user's email. Always returns `200` regardless of whether the email is registered (prevents email enumeration).
+
+```json
+// Request
+{ "email": "user@example.com" }
+
+// Response
+{ "message": "If that email is registered you will receive a reset link shortly" }
+```
+
+> The reset link expires in **60 minutes** and can only be used once.
+
+---
+
+### `POST /auth/reset-password-token`
+**Public**
+
+Resets the password using the token from the reset email.
+
+```json
+// Request
+{ "token": "hex-string-from-email", "newPassword": "min6chars" }
+
+// Response
+{ "message": "Password reset successfully" }
+```
+
+**Error cases:**
+| Status | Reason |
+|--------|--------|
+| `400`  | Token not found or already used |
+| `400`  | Token has expired (> 60 min) |
+| `400`  | New password is the same as current password |
 
 ---
 
@@ -1349,6 +1401,8 @@ Resolve or dismiss a pending report. Optionally add an admin note.
 | `POST`   | `/auth/get-new-token`                      | —                | ✅     |
 | `POST`   | `/auth/reset-password`                     | Any role         | ❌     |
 | `POST`   | `/auth/change-password`                    | Any role         | ❌     |
+| `POST`   | `/auth/forgot-password`                    | —                | ✅     |
+| `POST`   | `/auth/reset-password-token`               | —                | ✅     |
 | `POST`   | `/users/register`                          | —                | ✅     |
 | `GET`    | `/users/`                                  | ADMIN+           | ❌     |
 | `GET`    | `/users/me`                                | Any role         | ❌     |
