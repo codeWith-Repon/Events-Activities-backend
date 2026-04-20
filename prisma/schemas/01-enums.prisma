@@ -59,3 +59,14 @@ enum NotificationType {
   WAITLIST_PROMOTED
   EVENT_CANCELLED
 }
+
+enum ReportType {
+  EVENT
+  RATING
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}

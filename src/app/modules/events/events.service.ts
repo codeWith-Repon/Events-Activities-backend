@@ -340,6 +340,24 @@ const getEventAnalytics = async (slug: string, decodedToken: JwtPayload) => {
     };
 };
 
+const adminCancelEvent = async (eventId: string) => {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
+    if (event.status === EventStatus.CANCELLED) throw new AppError(status.BAD_REQUEST, "Event is already cancelled");
+
+    await prisma.event.update({ where: { id: eventId }, data: { status: EventStatus.CANCELLED } });
+
+    // Notify all approved participants
+    const participants = await prisma.eventParticipant.findMany({
+        where: { eventId, joinStatus: JoinStatus.APPROVED },
+        select: { userId: true }
+    });
+
+    participants.forEach(({ userId }) => {
+        notify({ userId, type: NotificationType.EVENT_CANCELLED, title: "Event cancelled", message: `"${event.title}" has been cancelled by the platform.`, emailHtml: buildEventCancelledEmail(event.title) });
+    });
+};
+
 export const EventsService = {
     createEvent,
     getAllEvents,
@@ -347,5 +365,6 @@ export const EventsService = {
     updateEvent,
     deleteEvent,
     getAllEventsCategory,
-    getEventAnalytics
+    getEventAnalytics,
+    adminCancelEvent
 }

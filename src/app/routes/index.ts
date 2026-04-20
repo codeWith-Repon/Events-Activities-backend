@@ -10,6 +10,7 @@ import { invitationRoutes } from "../modules/invitation/invitation.route";
 import { notificationRoutes } from "../modules/notification/notification.route";
 import { checkinRoutes } from "../modules/checkin/checkin.route";
 import { cohostRoutes } from "../modules/cohost/cohost.route";
+import { reportRoutes } from "../modules/report/report.route";
 
 
 export const router: Router = Router()
@@ -58,6 +59,10 @@ const moduleRoutes = [
     {
         path: '/co-hosts',
         route: cohostRoutes
+    },
+    {
+        path: '/reports',
+        route: reportRoutes
     }
 ]
 

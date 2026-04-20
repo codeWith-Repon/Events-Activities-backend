@@ -32,6 +32,7 @@ model User {
   payments          Payment[]
   ratings           Rating[]         @relation("RatingsGiven")
   notifications     Notification[]
+  reports           Report[]
 
   @@map("users")
 }

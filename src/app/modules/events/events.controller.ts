@@ -102,6 +102,11 @@ const getEventAnalytics = catchAsync(
     }
 )
 
+const adminCancelEvent = catchAsync(async (req: Request, res: Response) => {
+    await EventsService.adminCancelEvent(req.params.eventId as string);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "Event force-cancelled", data: null });
+});
+
 export const EventsController: Record<string, any> = {
     createEvent,
     getAllEvents,
@@ -109,5 +114,6 @@ export const EventsController: Record<string, any> = {
     updateEvent,
     deleteEvent,
     getAllEventsCategory,
-    getEventAnalytics
+    getEventAnalytics,
+    adminCancelEvent
 }

@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T09:12:08.869Z
+// Last generated: 2026-04-20T09:32:06.323Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -86,6 +86,17 @@ enum NotificationType {
   EVENT_CANCELLED
 }
 
+enum ReportType {
+  EVENT
+  RATING
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
 
 // ============ From: 02-user.prisma ============
 
@@ -123,6 +134,7 @@ model User {
   payments          Payment[]
   ratings           Rating[]         @relation("RatingsGiven")
   notifications     Notification[]
+  reports           Report[]
 
   @@map("users")
 }
@@ -398,6 +410,33 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+
+// ============ From: 08-report.prisma ============
+
+// ========================================
+// REPORT MODEL
+// ========================================
+
+model Report {
+  id         String       @id @default(uuid())
+
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reporterId String
+
+  type       ReportType
+  targetId   String       // eventId or ratingId depending on type
+  reason     String
+  status     ReportStatus @default(PENDING)
+  adminNote  String?
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([type, status])
+  @@index([reporterId])
+  @@map("reports")
 }
 
 
