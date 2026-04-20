@@ -172,6 +172,40 @@ Deletes user by UUID. Returns deleted user object.
 
 ---
 
+### `PATCH /users/:userId/status`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Block or unblock a user account.
+
+```json
+// Request
+{ "status": "BLOCKED" }   // or "ACTIVE"
+
+// Response
+{ "data": { /* updated user object (no password) */ } }
+```
+
+> A `BLOCKED` user cannot log in. Does not delete any data.
+
+---
+
+### `PATCH /users/:userId/role`
+**Auth required: SUPER_ADMIN only**
+
+Promote or demote a user's role. Promoting to `HOST` automatically creates a `Host` record if one doesn't exist.
+
+```json
+// Request
+{ "role": "HOST" }   // "USER" | "HOST" | "ADMIN"
+
+// Response
+{ "data": { /* updated user object (no password) */ } }
+```
+
+> Only `SUPER_ADMIN` can use this endpoint to prevent privilege escalation.
+
+---
+
 ## 3. Events `/api/v1/events`
 
 ### `POST /events/create-event`
@@ -399,6 +433,55 @@ Validates payment via Instant Payment Notification.
 
 ---
 
+### `GET /payment`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Lists all payments with optional filters.
+
+| Query Param     | Type   | Description                                      |
+|-----------------|--------|--------------------------------------------------|
+| `paymentStatus` | string | `PENDING` \| `PAID` \| `FAILED` \| `REFUNDED` etc |
+| `eventId`       | string | Filter by event UUID                             |
+| `userId`        | string | Filter by user UUID                              |
+| `page`          | number | Default: 1                                       |
+| `limit`         | number | Default: 10                                      |
+
+```json
+// Response
+{
+  "data": {
+    "meta": { "page": 1, "limit": 10, "totalPage": 3, "total": 28 },
+    "data": [
+      {
+        "id": "uuid",
+        "amount": 500,
+        "paymentStatus": "PAID",
+        "transactionId": "TXN-...",
+        "user": { "name": "Alice", "email": "alice@example.com" },
+        "event": { "title": "Beach Cleanup", "slug": "beach-cleanup" },
+        "createdAt": "timestamp"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `PATCH /payment/:paymentId/refund`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Manually refunds a `PAID` payment. Sets payment to `REFUNDED` and participant `joinStatus` to `CANCELLED`.
+
+```json
+// Response
+{ "data": null, "message": "Payment refunded" }
+```
+
+> Only `PAID` payments can be refunded. Returns `400` for any other status.
+
+---
+
 ## 6. Dashboard `/api/v1/dashboard`
 
 ### `GET /dashboard/meta-data`
@@ -421,6 +504,33 @@ Validates payment via Instant Payment Notification.
   }
 }
 ```
+
+---
+
+### `GET /dashboard/revenue-report`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Returns platform-wide revenue analytics.
+
+```json
+// Response
+{
+  "data": {
+    "topEvents": [
+      { "id": "uuid", "title": "Beach Cleanup", "slug": "beach-cleanup", "revenue": 2500 }
+    ],
+    "topHosts": [
+      { "hostId": "uuid", "name": "John Doe", "revenue": 4800 }
+    ],
+    "monthlyRevenue": [
+      { "month": "2026-01", "revenue": 1200 },
+      { "month": "2026-02", "revenue": 1750 }
+    ]
+  }
+}
+```
+
+> `topEvents` and `topHosts` are limited to top 10. `monthlyRevenue` covers all time.
 
 ---
 
@@ -1018,6 +1128,201 @@ Returns a full stats breakdown for a single event.
 
 ---
 
+## 13. Event Moderation `/api/v1/events`
+
+Admin-only actions on any event regardless of host ownership.
+
+---
+
+### `PATCH /events/:eventId/force-cancel`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Force-cancels any event by its UUID. Notifies all approved participants via in-app notification and email.
+
+```json
+// Response
+{ "data": null, "message": "Event force-cancelled" }
+```
+
+**Error cases:**
+| Status | Reason |
+|--------|--------|
+| `404`  | Event not found |
+| `400`  | Event is already cancelled |
+
+---
+
+## 14. Host Management `/api/v1/hosts`
+
+Admin endpoints for managing host accounts and viewing host performance.
+
+---
+
+### `GET /hosts`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Paginated list of all hosts with their user info and event count.
+
+| Query Param | Type   | Description        |
+|-------------|--------|--------------------|
+| `page`      | number | Default: 1         |
+| `limit`     | number | Default: 10        |
+| `sortBy`    | string | Default: createdAt |
+| `sortOrder` | string | `asc` or `desc`    |
+
+```json
+// Response
+{
+  "data": {
+    "meta": { "page": 1, "limit": 10, "totalPage": 2, "total": 15 },
+    "data": [
+      {
+        "id": "uuid",
+        "isVerified": true,
+        "rating": 4.5,
+        "totalEventsHosted": 8,
+        "user": { "name": "Jane", "email": "jane@example.com", "profileImage": "url", "status": "ACTIVE" },
+        "_count": { "events": 8 }
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `GET /hosts/:hostId/stats`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Returns detailed stats for a single host.
+
+```json
+// Response
+{
+  "data": {
+    "host": {
+      "id": "uuid",
+      "rating": 4.5,
+      "isVerified": true,
+      "user": { "name": "Jane", "email": "jane@example.com", "profileImage": "url" }
+    },
+    "stats": {
+      "totalEvents": 8,
+      "totalParticipants": 142,
+      "totalRevenue": 7100,
+      "averageRating": 4.5
+    }
+  }
+}
+```
+
+---
+
+### `PATCH /hosts/:hostId/verify`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Toggle the verified badge on a host account.
+
+```json
+// Request
+{ "isVerified": true }   // or false to revoke
+
+// Response
+{ "data": { /* updated host object */ } }
+```
+
+---
+
+## 15. Content Reports `/api/v1/reports`
+
+Users can report events or ratings. Admins review and resolve them.
+
+---
+
+### `POST /reports`
+**Auth required (any role)**
+
+Submit a report about an event or a rating.
+
+```json
+// Request
+{
+  "type": "EVENT",          // "EVENT" | "RATING"
+  "targetId": "uuid",       // eventId or ratingId
+  "reason": "Misleading description"
+}
+
+// Response 201
+{
+  "data": {
+    "id": "uuid",
+    "type": "EVENT",
+    "targetId": "uuid",
+    "reason": "Misleading description",
+    "status": "PENDING",
+    "reporterId": "uuid",
+    "createdAt": "timestamp"
+  }
+}
+```
+
+---
+
+### `GET /reports`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Lists all reports with optional filters.
+
+| Query Param | Type   | Description                              |
+|-------------|--------|------------------------------------------|
+| `type`      | string | `EVENT` \| `RATING`                      |
+| `status`    | string | `PENDING` \| `RESOLVED` \| `DISMISSED`   |
+| `page`      | number | Default: 1                               |
+| `limit`     | number | Default: 10                              |
+
+```json
+// Response
+{
+  "data": {
+    "meta": { "page": 1, "limit": 10, "totalPage": 1, "total": 4 },
+    "data": [
+      {
+        "id": "uuid",
+        "type": "EVENT",
+        "targetId": "uuid",
+        "reason": "Misleading description",
+        "status": "PENDING",
+        "adminNote": null,
+        "reporter": { "name": "Alice", "email": "alice@example.com" },
+        "createdAt": "timestamp"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `PATCH /reports/:reportId`
+**Auth required: ADMIN, SUPER_ADMIN**
+
+Resolve or dismiss a pending report. Optionally add an admin note.
+
+```json
+// Request
+{
+  "status": "RESOLVED",           // "RESOLVED" | "DISMISSED"
+  "adminNote": "Content removed"  // optional
+}
+
+// Response
+{ "data": { /* updated report object */ } }
+```
+
+> Returns `400` if the report is already resolved or dismissed.
+
+---
+
 ## Enums Reference
 
 | Enum             | Values                                                      |
@@ -1030,6 +1335,8 @@ Returns a full stats breakdown for a single event.
 | **InvitationStatus** | `PENDING`, `ACCEPTED`, `DECLINED`, `REVOKED`                              |
 | **NotificationType** | `EVENT_REMINDER`, `PARTICIPANT_APPROVED`, `PARTICIPANT_REJECTED`, `PARTICIPANT_WAITLISTED`, `WAITLIST_PROMOTED`, `EVENT_CANCELLED` |
 | **PaymentStatus**| `PENDING`, `PAID`, `CANCELLED`, `REJECTED`, `FAILED`, `REFUNDED` |
+| **ReportType**   | `EVENT`, `RATING`                                           |
+| **ReportStatus** | `PENDING`, `RESOLVED`, `DISMISSED`                          |
 
 ---
 
@@ -1048,6 +1355,8 @@ Returns a full stats breakdown for a single event.
 | `GET`    | `/users/:userId`                           | Any role         | ❌     |
 | `PATCH`  | `/users/`                                  | Any role         | ❌     |
 | `DELETE` | `/users/:userId`                           | ADMIN+           | ❌     |
+| `PATCH`  | `/users/:userId/status`                    | ADMIN+           | ❌     |
+| `PATCH`  | `/users/:userId/role`                      | SUPER_ADMIN      | ❌     |
 | `POST`   | `/events/create-event`                     | Any role         | ❌     |
 | `GET`    | `/events/`                                 | —                | ✅     |
 | `GET`    | `/events/category`                         | —                | ✅     |
@@ -1064,7 +1373,17 @@ Returns a full stats breakdown for a single event.
 | `POST`   | `/payment/fail`                            | Webhook          | ✅     |
 | `POST`   | `/payment/cancel`                          | Webhook          | ✅     |
 | `POST`   | `/payment/validate-payment`               | Webhook          | ✅     |
+| `GET`    | `/payment`                                 | ADMIN+           | ❌     |
+| `PATCH`  | `/payment/:paymentId/refund`               | ADMIN+           | ❌     |
 | `GET`    | `/dashboard/meta-data`                     | ADMIN+           | ❌     |
+| `GET`    | `/dashboard/revenue-report`                | ADMIN+           | ❌     |
+| `PATCH`  | `/events/:eventId/force-cancel`            | ADMIN+           | ❌     |
+| `GET`    | `/hosts`                                   | ADMIN+           | ❌     |
+| `GET`    | `/hosts/:hostId/stats`                     | ADMIN+           | ❌     |
+| `PATCH`  | `/hosts/:hostId/verify`                    | ADMIN+           | ❌     |
+| `POST`   | `/reports`                                 | Any role         | ❌     |
+| `GET`    | `/reports`                                 | ADMIN+           | ❌     |
+| `PATCH`  | `/reports/:reportId`                       | ADMIN+           | ❌     |
 | `POST`   | `/invitations/send`                        | Host only        | ❌     |
 | `POST`   | `/invitations/accept/:token`               | Any role         | ❌     |
 | `POST`   | `/invitations/decline/:token`              | Any role         | ❌     |
