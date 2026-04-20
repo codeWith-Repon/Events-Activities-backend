@@ -160,3 +160,18 @@ export const buildInvitationEmail = (params: {
     `,
     cta: { label: "Accept Invitation", href: params.inviteLink }
   });
+
+export const buildPasswordResetEmail = (resetLink: string, expiryMinutes: number): string =>
+  baseTemplate({
+    accentColor: "#0f172a",
+    icon: "🔐",
+    heading: "Reset your password",
+    body: `
+      ${p("We received a request to reset your password. Click the button below to choose a new one.")}
+      ${p(`This link will expire in <strong>${expiryMinutes} minutes</strong>. If you did not request a password reset, you can safely ignore this email.`)}
+      <p style="margin:20px 0 0;text-align:center;color:#9ca3af;font-size:12px">
+        For security, this link can only be used once.
+      </p>
+    `,
+    cta: { label: "Reset Password", href: resetLink }
+  });
