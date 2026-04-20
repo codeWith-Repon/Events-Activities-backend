@@ -20,11 +20,12 @@ const loginUser = async (payload: { email: string; password: string }) => {
         }
     })
 
-    if (!isUserExist) {
-        throw new AppError(
-            status.BAD_REQUEST,
-            "User not found. Please register first."
-        );
+    if (!isUserExist || isUserExist.isDeleted) {
+        throw new AppError(status.BAD_REQUEST, "User not found. Please register first.");
+    }
+
+    if (isUserExist.status === "BLOCKED") {
+        throw new AppError(status.FORBIDDEN, "Your account has been blocked. Please contact support.");
     }
 
     const isPasswordMatch = await bcryptjs.compare(payload.password, isUserExist.password)
