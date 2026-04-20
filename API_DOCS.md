@@ -310,7 +310,8 @@ Deletes event by slug.
 ```
 > If event fee is **0**: `joinStatus` auto-set to `APPROVED`, `paymentStatus` auto-set to `PAID`.  
 > If event fee > 0: both remain `PENDING` until payment is made.  
-> Cannot join own event, cancelled/full/completed events, or same event twice.
+> If event is **FULL**: `joinStatus` is set to `WAITLISTED`. When an approved participant cancels or is rejected, the oldest waitlisted participant is automatically approved and the event stays `FULL`. If no one is waitlisted, the event returns to `OPEN`.  
+> Cannot join own event, cancelled/completed events, or same event twice.
 
 ---
 
@@ -322,7 +323,7 @@ Deletes event by slug.
 | `page`           | number | Default: 1                                                |
 | `limit`          | number | Default: 10                                               |
 | `searchTerm`     | string | Searches user name, email, host name, event title         |
-| `joinStatus`     | string | `PENDING` \| `APPROVED` \| `REJECTED` \| `CANCELLED`     |
+| `joinStatus`     | string | `PENDING` \| `APPROVED` \| `REJECTED` \| `CANCELLED` \| `WAITLISTED` |
 | `paymentStatus`  | string | `PENDING` \| `PAID` \| `CANCELLED` \| `REJECTED` \| `FAILED` \| `REFUNDED` |
 | `eventId`        | string | Filter by event UUID                                      |
 | `userId`         | string | Filter by user UUID                                       |
@@ -609,7 +610,7 @@ Deletes the rating and recalculates the host's overall average rating.
 | **UserStatus**   | `ACTIVE`, `INACTIVE`, `BLOCKED`                             |
 | **Gender**       | `MALE`, `FEMALE`                                            |
 | **EventStatus**  | `OPEN`, `FULL`, `CANCELLED`, `COMPLETED`                    |
-| **JoinStatus**   | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`              |
+| **JoinStatus**   | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `WAITLISTED` |
 | **PaymentStatus**| `PENDING`, `PAID`, `CANCELLED`, `REJECTED`, `FAILED`, `REFUNDED` |
 
 ---

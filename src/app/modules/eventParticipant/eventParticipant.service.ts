@@ -32,7 +32,6 @@ const createEventParticipant = async (
 
         const blockedStatuses: EventStatus[] = [
             EventStatus.CANCELLED,
-            EventStatus.FULL,
             EventStatus.COMPLETED
         ];
 
@@ -50,8 +49,21 @@ const createEventParticipant = async (
         if (existsEventParticipant)
             throw new AppError(status.BAD_REQUEST, "Already joined this event");
 
+        const isFull = existsEvent.status === EventStatus.FULL;
+        const isFree = existsEvent.fee === 0;
 
-        const isFree = existsEvent.fee === 0
+        // FULL event → waitlist instead of rejecting
+        if (isFull) {
+            const waitlisted = await tx.eventParticipant.create({
+                data: {
+                    userId,
+                    eventId: payload.eventId,
+                    joinStatus: JoinStatus.WAITLISTED,
+                    paymentStatus: PaymentStatus.PENDING
+                }
+            });
+            return waitlisted;
+        }
 
         // Create event participant
         const eventParticipant = await tx.eventParticipant.create({
@@ -223,6 +235,33 @@ const getEventParticipantById = async (id: string) => {
     return participant;
 };
 
+const autoApproveNextWaitlisted = async (eventId: string, tx: any) => {
+    const nextWaitlisted = await tx.eventParticipant.findFirst({
+        where: { eventId, joinStatus: JoinStatus.WAITLISTED },
+        orderBy: { createdAt: "asc" }
+    });
+
+    if (!nextWaitlisted) {
+        await tx.event.update({
+            where: { id: eventId },
+            data: { status: EventStatus.OPEN }
+        });
+        return;
+    }
+
+    const event = await tx.event.findUnique({ where: { id: eventId } });
+    const isFree = event.fee === 0;
+
+    await tx.eventParticipant.update({
+        where: { id: nextWaitlisted.id },
+        data: {
+            joinStatus: JoinStatus.APPROVED,
+            paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
+        }
+    });
+    // event stays FULL — one left, one approved
+};
+
 const updateEventParticipantById = async (
     eventParticipantId: string,
     decodedToken: JwtPayload,
@@ -253,32 +292,33 @@ const updateEventParticipantById = async (
             isUserExist.id === isParticipantExist.userId
             && payload.joinStatus === JoinStatus.CANCELLED
         ) {
+            const prevJoinStatus = isParticipantExist.joinStatus;
+
             const updatedParticipant = await tx.eventParticipant.update({
                 where: { id: eventParticipantId },
                 data: {
-                    ...payload,
+                    joinStatus: JoinStatus.CANCELLED,
                     paymentStatus: PaymentStatus.CANCELLED
                 }
-            })
+            });
 
             const payment = await tx.payment.findFirst({
                 where: { participantId: eventParticipantId }
             });
 
-            if (!payment) {
-                throw new AppError(status.NOT_FOUND, "Payment not found");
+            if (payment) {
+                await tx.payment.update({
+                    where: { id: payment.id },
+                    data: { paymentStatus: PaymentStatus.CANCELLED }
+                });
             }
 
-            await tx.payment.update({
-                where: {
-                    id: payment.id
-                },
-                data: {
-                    paymentStatus: PaymentStatus.CANCELLED
-                }
-            });
+            // Only open a waitlist spot when an APPROVED participant cancels
+            if (prevJoinStatus === JoinStatus.APPROVED) {
+                await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
+            }
 
-            return updatedParticipant
+            return updatedParticipant;
         }
 
         // 3. host can update participant status -> reject
@@ -297,13 +337,15 @@ const updateEventParticipantById = async (
             throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
         }
 
+        const prevJoinStatus = isParticipantExist.joinStatus;
+
         const updatedParticipantStatus = await tx.eventParticipant.update({
             where: { id: eventParticipantId },
             data: {
                 ...payload,
                 paymentStatus: PaymentStatus.REJECTED
             }
-        })
+        });
 
         const payment = await tx.payment.findFirst({
             where: { participantId: eventParticipantId }
@@ -311,16 +353,17 @@ const updateEventParticipantById = async (
 
         if (payment) {
             await tx.payment.update({
-                where: {
-                    id: payment.id
-                },
-                data: {
-                    paymentStatus: PaymentStatus.REJECTED
-                }
+                where: { id: payment.id },
+                data: { paymentStatus: PaymentStatus.REJECTED }
             });
         }
 
-        return updatedParticipantStatus
+        // Free up the spot if an APPROVED participant was rejected
+        if (prevJoinStatus === JoinStatus.APPROVED) {
+            await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
+        }
+
+        return updatedParticipantStatus;
     })
 };
 

@@ -1,11 +1,9 @@
 fix/database
 event_reviews_ratings
-
+(whitlist_system)
 
 Core Features
 
-
-Waitlist System — auto-approve when a spot opens up
 Event Invitations — host invites specific users via email/link
 Recurring Events — weekly/monthly event scheduling
 Social Features

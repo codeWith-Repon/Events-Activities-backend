@@ -32,6 +32,7 @@ enum JoinStatus {
   APPROVED
   REJECTED
   CANCELLED
+  WAITLISTED
 }
 
 enum PaymentStatus {

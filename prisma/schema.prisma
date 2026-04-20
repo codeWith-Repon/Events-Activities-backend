@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-18T14:58:24.554Z
+// Last generated: 2026-04-20T04:53:33.144Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -58,6 +58,7 @@ enum JoinStatus {
   APPROVED
   REJECTED
   CANCELLED
+  WAITLISTED
 }
 
 enum PaymentStatus {
