@@ -22,6 +22,10 @@ model User {
   isVerified    Boolean   @default(false)
   isDeleted     Boolean   @default(false)
 
+  // Password Reset
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

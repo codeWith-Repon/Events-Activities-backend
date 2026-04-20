@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T09:34:19.760Z
+// Last generated: 2026-04-20T10:09:27.958Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -123,6 +123,10 @@ model User {
   status        UserStatus @default(ACTIVE)
   isVerified    Boolean   @default(false)
   isDeleted     Boolean   @default(false)
+
+  // Password Reset
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
 
   // Timestamps
   createdAt DateTime @default(now())
