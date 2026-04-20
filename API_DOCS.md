@@ -971,6 +971,53 @@ Removes a co-host from an event. `:hostId` is the `Host.id` (not `userId`).
 
 ---
 
+## 12. Event Analytics `/api/v1/events`
+
+Per-event statistics available to the primary host and co-hosts. View count increments on every public `GET /events/:slug` call.
+
+---
+
+### `GET /events/:slug/analytics`
+**Auth required — host or co-host only**
+
+Returns a full stats breakdown for a single event.
+
+```json
+// Response
+{
+  "data": {
+    "views": 312,
+    "participants": {
+      "total": 48,
+      "approved": 30,
+      "pending": 5,
+      "rejected": 3,
+      "cancelled": 4,
+      "waitlisted": 6
+    },
+    "capacity": {
+      "max": 50,
+      "filled": 30,
+      "fillRate": 0.6        // approved / maxParticipants
+    },
+    "revenue": {
+      "collected": 1500,     // sum of PAID payments
+      "pending": 250,        // sum of PENDING payments
+      "refunded": 0          // sum of REFUNDED payments
+    },
+    "checkin": {
+      "checkedIn": 22,
+      "absent": 8,
+      "attendanceRate": 0.73  // checkedIn / approved
+    }
+  }
+}
+```
+
+> `revenue` fields are `0` for free events. `checkin` stats are `0` until event day check-ins begin.
+
+---
+
 ## Enums Reference
 
 | Enum             | Values                                                      |
@@ -1031,6 +1078,7 @@ Removes a co-host from an event. `:hostId` is the `Host.id` (not `userId`).
 | `GET`    | `/check-in/qr/:participantId`              | Participant/Host | ❌     |
 | `POST`   | `/check-in`                                | Host only        | ❌     |
 | `GET`    | `/check-in/attendance/:eventId`            | Host only        | ❌     |
+| `GET`    | `/events/:slug/analytics`                  | Host/Co-host     | ❌     |
 | `GET`    | `/co-hosts/events/:eventId`                | —                | ✅     |
 | `POST`   | `/co-hosts/events/:eventId`                | Primary host     | ❌     |
 | `DELETE` | `/co-hosts/events/:eventId/:hostId`        | Primary host     | ❌     |
