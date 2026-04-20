@@ -58,10 +58,24 @@ const validatePayment = catchAsync(async (req: Request, res: Response) => {
 })
 
 
+const getAllPayments = catchAsync(async (req: Request, res: Response) => {
+    const filters = { paymentStatus: req.query.paymentStatus, eventId: req.query.eventId, userId: req.query.userId };
+    const options = { page: req.query.page, limit: req.query.limit, sortBy: req.query.sortBy, sortOrder: req.query.sortOrder };
+    const result = await PaymentService.getAllPayments(filters, options);
+    sendResponse(res, { statusCode: 200, success: true, message: "Payments retrieved", data: result });
+});
+
+const adminRefund = catchAsync(async (req: Request, res: Response) => {
+    await PaymentService.adminRefund(req.params.paymentId as string);
+    sendResponse(res, { statusCode: 200, success: true, message: "Payment refunded", data: null });
+});
+
 export const PaymentController: Record<string, any> = {
     successPayment,
     failPayment,
     cancelPayment,
     initPayment,
-    validatePayment
+    validatePayment,
+    getAllPayments,
+    adminRefund
 }
