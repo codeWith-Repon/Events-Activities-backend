@@ -4,7 +4,7 @@ import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { ICreateRating, IUpdateRating } from "./rating.interface";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
-import { ratingSearchableFields, ratingFilterableFields } from "./rating.constants";
+import { ratingSearchableFields, ratingNumericFilterFields } from "./rating.constants";
 import { Prisma, EventStatus } from "../../../generated/prisma/client";
 
 // Create a new rating
@@ -272,11 +272,15 @@ const listEventRatings = async (
     });
   }
 
-  // Filter by rating value
-  if (filterData.rating) {
-    andConditions.push({
-      rating: { equals: parseInt(filterData.rating) }
-    });
+  if (Object.keys(filterData).length > 0) {
+    const filterConditions = Object.keys(filterData).map((key) => ({
+      [key]: {
+        equals: ratingNumericFilterFields.includes(key)
+          ? parseInt(filterData[key])
+          : filterData[key]
+      }
+    }));
+    andConditions.push({ AND: filterConditions });
   }
 
   const whereConditions: Prisma.RatingWhereInput =
@@ -362,6 +366,17 @@ const listUserRatings = async (
         };
       })
     });
+  }
+
+  if (Object.keys(filterData).length > 0) {
+    const filterConditions = Object.keys(filterData).map((key) => ({
+      [key]: {
+        equals: ratingNumericFilterFields.includes(key)
+          ? parseInt(filterData[key])
+          : filterData[key]
+      }
+    }));
+    andConditions.push({ AND: filterConditions });
   }
 
   const whereConditions: Prisma.RatingWhereInput =

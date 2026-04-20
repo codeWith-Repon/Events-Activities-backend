@@ -4,6 +4,10 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import status from "http-status";
 import pick from "../../helpers/pick";
+import {
+  eventRatingFilterableFields,
+  userRatingFilterableFields
+} from "./rating.constants";
 
 const createRating = catchAsync(async (req: Request, res: Response) => {
   const result = await ratingService.createRating(req.body, req.user);
@@ -59,7 +63,7 @@ const getRatingById = catchAsync(async (req: Request, res: Response) => {
 const listEventRatings = catchAsync(async (req: Request, res: Response) => {
   const { eventId } = req.params as { eventId: string };
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-  const filter = pick(req.query, ["searchTerm", "rating"]);
+  const filter = pick(req.query, eventRatingFilterableFields);
 
   const result = await ratingService.listEventRatings(
     eventId,
@@ -79,7 +83,7 @@ const listEventRatings = catchAsync(async (req: Request, res: Response) => {
 const listUserRatings = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params as { userId: string };
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-  const filter = pick(req.query, ["searchTerm"]);
+  const filter = pick(req.query, userRatingFilterableFields);
 
   const result = await ratingService.listUserRatings(userId, filter, options);
 
