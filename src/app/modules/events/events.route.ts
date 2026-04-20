@@ -36,6 +36,12 @@ router.patch(
 )
 
 router.get(
+    "/:slug/analytics",
+    checkAuth(UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    EventsController.getEventAnalytics
+)
+
+router.get(
     "/:slug",
     EventsController.getEventBySlug
 )
