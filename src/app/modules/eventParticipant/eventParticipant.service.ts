@@ -13,6 +13,7 @@ import {
     buildWaitlistedEmail,
     buildWaitlistPromotedEmail
 } from "../../utils/emailTemplates";
+import { generateCheckInToken } from "../checkin/checkin.service";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -78,7 +79,8 @@ const createEventParticipant = async (
                 userId,
                 eventId: payload.eventId,
                 joinStatus: isFree ? JoinStatus.APPROVED : JoinStatus.PENDING,
-                paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
+                paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING,
+                ...(isFree && { checkInToken: generateCheckInToken() })
             }
         });
 
@@ -273,7 +275,8 @@ const autoApproveNextWaitlisted = async (
         where: { id: nextWaitlisted.id },
         data: {
             joinStatus: JoinStatus.APPROVED,
-            paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
+            paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING,
+            checkInToken: generateCheckInToken()
         }
     });
     // event stays FULL — one left, one approved
@@ -331,9 +334,14 @@ const updateEventParticipantById = async (
 
         const prevJoinStatus = isParticipantExist.joinStatus;
 
+        const isApproving = payload.joinStatus === JoinStatus.APPROVED;
         const updated = await tx.eventParticipant.update({
             where: { id: eventParticipantId },
-            data: { ...payload, paymentStatus: PaymentStatus.REJECTED }
+            data: {
+                ...payload,
+                paymentStatus: isApproving ? isParticipantExist.paymentStatus : PaymentStatus.REJECTED,
+                ...(isApproving && { checkInToken: generateCheckInToken() })
+            }
         });
 
         const payment = await tx.payment.findFirst({ where: { participantId: eventParticipantId } });

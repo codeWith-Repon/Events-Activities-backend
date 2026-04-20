@@ -8,6 +8,7 @@ import { MetaRoutes } from "../modules/meta/meta.route";
 import { ratingRoutes } from "../modules/rating/rating.route";
 import { invitationRoutes } from "../modules/invitation/invitation.route";
 import { notificationRoutes } from "../modules/notification/notification.route";
+import { checkinRoutes } from "../modules/checkin/checkin.route";
 
 
 export const router: Router = Router()
@@ -48,6 +49,10 @@ const moduleRoutes = [
     {
         path: '/notifications',
         route: notificationRoutes
+    },
+    {
+        path: '/check-in',
+        route: checkinRoutes
     }
 ]
 

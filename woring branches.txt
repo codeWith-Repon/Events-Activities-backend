@@ -2,6 +2,7 @@ fix/database
 event_reviews_ratings
 (whitlist_system)
 (invite)
+QR_code
 
 
 Social Features
@@ -10,7 +11,6 @@ Social Features
 7. Share & Referral Links — track who referred participants
 
 Host Tools
-8. Attendance Check-in — QR code scan on event day
 9. Coupon/Discount Codes — percentage or flat discount on fees
 10. Event Analytics — per-event stats for hosts (views, joins, revenue)
 11. Co-host Support — assign multiple hosts to one event

@@ -793,6 +793,98 @@ Deletes the rating and recalculates the host's overall average rating.
 
 ---
 
+## 10. Check-in `/api/v1/check-in`
+
+Handles QR-based attendance tracking on event day.
+
+**Flow:**
+1. Approved participant calls `GET /check-in/qr/:participantId` → receives a `checkInToken`
+2. Frontend renders a QR code from that token (e.g. `react-qr-code`)
+3. Host scans the QR on event day → frontend sends the decoded token to `POST /check-in`
+4. Host can view the full attendance summary via `GET /check-in/attendance/:eventId`
+
+---
+
+### `GET /check-in/qr/:participantId`
+**Auth required — participant themselves or the event host**
+
+Returns the raw check-in token for an approved participant. The frontend uses this to render a QR code.
+
+```json
+// Response
+{
+  "data": {
+    "checkInToken": "a3f8c2e1...",   // 32-char hex token — encode this as QR
+    "eventTitle": "Beach Cleanup",
+    "eventDate": "2026-05-10T09:00:00.000Z"
+  }
+}
+```
+
+> Only available when `joinStatus` is `APPROVED`. Returns `400` for pending/waitlisted/cancelled participants.
+
+---
+
+### `POST /check-in`
+**Auth required — event host only**
+
+Marks a participant as attended. The `token` comes from scanning the participant's QR code.
+
+```json
+// Request
+{ "token": "a3f8c2e1..." }
+
+// Response
+{
+  "data": {
+    "id": "string",
+    "checkedIn": true,
+    "checkedInAt": "2026-05-10T09:14:32.000Z",
+    "joinStatus": "APPROVED",
+    ...
+  }
+}
+```
+
+**Error cases:**
+| Status | Reason |
+|--------|--------|
+| `404`  | Token not found / invalid |
+| `400`  | Already checked in |
+| `400`  | Participant not approved |
+| `400`  | Not event day (`checkedInAt` date ≠ today) |
+| `403`  | Caller is not the event host |
+
+---
+
+### `GET /check-in/attendance/:eventId`
+**Auth required — event host only**
+
+Returns a full attendance summary for an event.
+
+```json
+// Response
+{
+  "data": {
+    "total": 20,
+    "attended": 14,
+    "absent": 6,
+    "participants": [
+      {
+        "id": "string",
+        "checkedIn": true,
+        "checkedInAt": "2026-05-10T09:14:32.000Z",
+        "user": { "name": "Alice", "email": "alice@example.com", "profileImage": "url" }
+      }
+    ]
+  }
+}
+```
+
+> Only `APPROVED` participants are included. Results are ordered by `checkedInAt` (most recent first, unchecked participants last).
+
+---
+
 ## Enums Reference
 
 | Enum             | Values                                                      |
@@ -850,6 +942,9 @@ Deletes the rating and recalculates the host's overall average rating.
 | `PATCH`  | `/notifications/read-all`                  | Any role         | ❌     |
 | `PATCH`  | `/notifications/:notificationId/read`      | Any role         | ❌     |
 | `DELETE` | `/notifications/:notificationId`           | Any role         | ❌     |
+| `GET`    | `/check-in/qr/:participantId`              | Participant/Host | ❌     |
+| `POST`   | `/check-in`                                | Host only        | ❌     |
+| `GET`    | `/check-in/attendance/:eventId`            | Host only        | ❌     |
 | `POST`   | `/ratings/create`                          | Any role         | ❌     |
 | `GET`    | `/ratings/events/:eventId`                 | —                | ✅     |
 | `GET`    | `/ratings/users/:userId`                   | —                | ✅     |
