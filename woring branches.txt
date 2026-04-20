@@ -16,7 +16,6 @@ Host Tools
 11. Co-host Support — assign multiple hosts to one event
 
 User Experience
-12. Notification System — in-app + email alerts (event reminders, approval updates)
 13. Saved/Bookmarked Events — wishlist before joining
 14. Personalized Feed — recommend events based on past activity
 

@@ -424,7 +424,81 @@ Validates payment via Instant Payment Notification.
 
 ---
 
-## 7. Invitations `/api/v1/invitations`
+## 7. Notifications `/api/v1/notifications`
+
+> All endpoints require authentication. Each user only sees their own notifications.
+
+**Notification types**
+
+| Type | Trigger |
+|------|---------|
+| `PARTICIPANT_APPROVED` | Joined a free event / host approves |
+| `PARTICIPANT_REJECTED` | Host rejects a join request |
+| `PARTICIPANT_WAITLISTED` | Joined a full event (added to waitlist) |
+| `WAITLIST_PROMOTED` | Auto-approved when a spot opens up |
+| `EVENT_CANCELLED` | Host cancels an event you're approved for |
+| `EVENT_REMINDER` | 24 h before an event you're attending (cron, hourly) |
+
+---
+
+### `GET /notifications/`
+**Auth required (any role)**
+
+Returns all notifications for the logged-in user, newest first.
+
+```json
+// Response
+{
+  "data": [
+    {
+      "id": "uuid",
+      "type": "PARTICIPANT_APPROVED",
+      "title": "You're in!",
+      "message": "Your spot for \"Beach Volleyball\" has been confirmed.",
+      "isRead": false,
+      "createdAt": "timestamp"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /notifications/unread-count`
+**Auth required (any role)**
+
+```json
+{ "data": { "unread": 3 } }
+```
+
+---
+
+### `PATCH /notifications/read-all`
+**Auth required (any role)**
+
+Marks every unread notification as read.
+
+```json
+{ "data": { "updated": 3 } }
+```
+
+---
+
+### `PATCH /notifications/:notificationId/read`
+**Auth required (any role)**
+
+Marks a single notification as read.
+
+---
+
+### `DELETE /notifications/:notificationId`
+**Auth required (any role)**
+
+Deletes a single notification.
+
+---
+
+## 8. Invitations `/api/v1/invitations`
 
 > **Business rules:**
 > - Only the event's **host** can send, revoke, or list invitations.
@@ -728,7 +802,8 @@ Deletes the rating and recalculates the host's overall average rating.
 | **Gender**       | `MALE`, `FEMALE`                                            |
 | **EventStatus**  | `OPEN`, `FULL`, `CANCELLED`, `COMPLETED`                    |
 | **JoinStatus**       | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `WAITLISTED` |
-| **InvitationStatus** | `PENDING`, `ACCEPTED`, `DECLINED`, `REVOKED`                 |
+| **InvitationStatus** | `PENDING`, `ACCEPTED`, `DECLINED`, `REVOKED`                              |
+| **NotificationType** | `EVENT_REMINDER`, `PARTICIPANT_APPROVED`, `PARTICIPANT_REJECTED`, `PARTICIPANT_WAITLISTED`, `WAITLIST_PROMOTED`, `EVENT_CANCELLED` |
 | **PaymentStatus**| `PENDING`, `PAID`, `CANCELLED`, `REJECTED`, `FAILED`, `REFUNDED` |
 
 ---
@@ -770,6 +845,11 @@ Deletes the rating and recalculates the host's overall average rating.
 | `POST`   | `/invitations/decline/:token`              | Any role         | ❌     |
 | `PATCH`  | `/invitations/revoke/:invitationId`        | Host only        | ❌     |
 | `GET`    | `/invitations/events/:eventId`             | Host only        | ❌     |
+| `GET`    | `/notifications/`                          | Any role         | ❌     |
+| `GET`    | `/notifications/unread-count`              | Any role         | ❌     |
+| `PATCH`  | `/notifications/read-all`                  | Any role         | ❌     |
+| `PATCH`  | `/notifications/:notificationId/read`      | Any role         | ❌     |
+| `DELETE` | `/notifications/:notificationId`           | Any role         | ❌     |
 | `POST`   | `/ratings/create`                          | Any role         | ❌     |
 | `GET`    | `/ratings/events/:eventId`                 | —                | ✅     |
 | `GET`    | `/ratings/users/:userId`                   | —                | ✅     |
