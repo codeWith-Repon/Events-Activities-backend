@@ -86,10 +86,22 @@ const changePassword = catchAsync(
     }
 )
 
+const forgotPassword = catchAsync(async (req: Request, res: Response) => {
+    await AuthService.forgotPassword(req.body.email);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "If that email is registered you will receive a reset link shortly", data: null });
+});
+
+const resetPasswordWithToken = catchAsync(async (req: Request, res: Response) => {
+    await AuthService.resetPasswordWithToken(req.body.token, req.body.newPassword);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "Password reset successfully", data: null });
+});
+
 export const AuthController: Record<string, any> = {
     loginUser,
     logOutUser,
     getNewToken,
     resetPassword,
-    changePassword
+    changePassword,
+    forgotPassword,
+    resetPasswordWithToken
 }

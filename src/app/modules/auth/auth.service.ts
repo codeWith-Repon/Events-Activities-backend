@@ -1,10 +1,15 @@
+import crypto from "crypto";
 import { prisma } from "../../../lib/prisma";
-import bcryptjs from "bcryptjs"
+import bcryptjs from "bcryptjs";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { createNewAccessTokenWitRefreshToken, createUserToken } from "../../utils/userToken";
 import { JwtPayload } from "jsonwebtoken";
 import { envVars } from "../../config/env";
+import { sendEmail } from "../../utils/sendEmail";
+import { buildPasswordResetEmail } from "../../utils/emailTemplates";
+
+const RESET_EXPIRY_MINUTES = 60;
 
 
 const loginUser = async (payload: { email: string; password: string }) => {
@@ -133,9 +138,57 @@ const changePassword = async (payload: { oldPassword: string, newPassword: strin
     };
 }
 
+const forgotPassword = async (email: string) => {
+    const user = await prisma.user.findUnique({ where: { email, isDeleted: false } });
+
+    // Always return success to avoid exposing registered emails
+    if (!user) return;
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + RESET_EXPIRY_MINUTES * 60 * 1000);
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordResetToken: token, passwordResetExpiry: expiry }
+    });
+
+    const baseUrl = envVars.NODE_ENV === "production" ? envVars.FRONTEND_LIVE_URL : envVars.FRONTEND_URL;
+    const resetLink = `${baseUrl}/reset-password?token=${token}`;
+
+    sendEmail({
+        to: user.email,
+        subject: "Reset your password",
+        html: buildPasswordResetEmail(resetLink, RESET_EXPIRY_MINUTES)
+    });
+};
+
+const resetPasswordWithToken = async (token: string, newPassword: string) => {
+    const user = await prisma.user.findFirst({
+        where: {
+            passwordResetToken: token,
+            passwordResetExpiry: { gt: new Date() },
+            isDeleted: false
+        }
+    });
+
+    if (!user) throw new AppError(status.BAD_REQUEST, "Invalid or expired reset token");
+
+    const isSameAsOld = await bcryptjs.compare(newPassword, user.password);
+    if (isSameAsOld) throw new AppError(status.BAD_REQUEST, "New password cannot be the same as your current password");
+
+    const hashedPassword = await bcryptjs.hash(newPassword, Number(envVars.BCRYPT_SALT_ROUND));
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword, passwordResetToken: null, passwordResetExpiry: null }
+    });
+};
+
 export const AuthService = {
     loginUser,
     getNewToken,
     resetPassword,
-    changePassword
+    changePassword,
+    forgotPassword,
+    resetPasswordWithToken
 }
