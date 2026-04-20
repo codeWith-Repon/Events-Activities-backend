@@ -40,6 +40,7 @@ model Event {
   payments          Payment[]
   ratings           Rating[]
   invitations       EventInvitation[]
+  coHosts           EventCoHost[]
 
   // Indexes for common queries
   @@index([status])
@@ -47,6 +48,21 @@ model Event {
   @@index([hostId])
   @@index([createdAt])
   @@map("events")
+}
+
+model EventCoHost {
+  id      String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([eventId, hostId])
+  @@map("event_co_hosts")
 }
 
 model EventParticipant {

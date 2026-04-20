@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T07:49:36.401Z
+// Last generated: 2026-04-20T08:51:13.718Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -140,9 +140,10 @@ model Host {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user        User              @relation(fields: [userId], references: [id])
-  events      Event[]
-  invitations EventInvitation[]
+  user           User              @relation(fields: [userId], references: [id])
+  events         Event[]
+  invitations    EventInvitation[]
+  coHostedEvents EventCoHost[]
 
   @@map("hosts")
 }
@@ -192,6 +193,7 @@ model Event {
   payments          Payment[]
   ratings           Rating[]
   invitations       EventInvitation[]
+  coHosts           EventCoHost[]
 
   // Indexes for common queries
   @@index([status])
@@ -199,6 +201,21 @@ model Event {
   @@index([hostId])
   @@index([createdAt])
   @@map("events")
+}
+
+model EventCoHost {
+  id      String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([eventId, hostId])
+  @@map("event_co_hosts")
 }
 
 model EventParticipant {
