@@ -39,6 +39,7 @@ model Event {
   eventParticipants EventParticipant[]
   payments          Payment[]
   ratings           Rating[]
+  invitations       EventInvitation[]
 
   // Indexes for common queries
   @@index([status])

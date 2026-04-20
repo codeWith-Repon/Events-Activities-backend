@@ -43,3 +43,10 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}

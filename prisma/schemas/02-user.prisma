@@ -48,8 +48,9 @@ model Host {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user   User   @relation(fields: [userId], references: [id])
-  events Event[]
+  user        User              @relation(fields: [userId], references: [id])
+  events      Event[]
+  invitations EventInvitation[]
 
   @@map("hosts")
 }

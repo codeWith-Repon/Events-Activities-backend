@@ -1,0 +1,34 @@
+// ========================================
+// INVITATION MODEL
+// ========================================
+
+model EventInvitation {
+  id      String @id @default(uuid())
+
+  // Event & Host Reference
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  // Invitee email (may not have an account yet)
+  email  String
+
+  // Unique token used in the invitation link
+  token  String @unique
+
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One invitation per email per event
+  @@unique([eventId, email])
+  @@index([token])
+  @@index([eventId])
+  @@index([status])
+  @@map("event_invitations")
+}

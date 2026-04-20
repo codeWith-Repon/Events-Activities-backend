@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T04:53:33.144Z
+// Last generated: 2026-04-20T05:12:44.684Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -70,6 +70,13 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
 
 // ============ From: 02-user.prisma ============
 
@@ -123,8 +130,9 @@ model Host {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user   User   @relation(fields: [userId], references: [id])
-  events Event[]
+  user        User              @relation(fields: [userId], references: [id])
+  events      Event[]
+  invitations EventInvitation[]
 
   @@map("hosts")
 }
@@ -173,6 +181,7 @@ model Event {
   eventParticipants EventParticipant[]
   payments          Payment[]
   ratings           Rating[]
+  invitations       EventInvitation[]
 
   // Indexes for common queries
   @@index([status])
@@ -291,6 +300,44 @@ model Rating {
   @@index([rating])            // Filter by rating value
   @@index([createdAt])         // Sort by recency
   @@map("ratings")
+}
+
+
+// ============ From: 06-invitation.prisma ============
+
+// ========================================
+// INVITATION MODEL
+// ========================================
+
+model EventInvitation {
+  id      String @id @default(uuid())
+
+  // Event & Host Reference
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  // Invitee email (may not have an account yet)
+  email  String
+
+  // Unique token used in the invitation link
+  token  String @unique
+
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One invitation per email per event
+  @@unique([eventId, email])
+  @@index([token])
+  @@index([eventId])
+  @@index([status])
+  @@map("event_invitations")
 }
 
 
