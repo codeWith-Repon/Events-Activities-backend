@@ -3,7 +3,7 @@
 // ========================================
 // This file is auto-generated from /prisma/schemas/*.prisma
 // Edit the individual files in /prisma/schemas/ instead
-// Last generated: 2026-04-20T05:55:03.252Z
+// Last generated: 2026-04-20T07:36:38.233Z
 //
 // To regenerate: npm run prisma:compile
 // ========================================
@@ -178,7 +178,6 @@ model Event {
 
   // Event Status
   status            EventStatus @default(OPEN)
-  reminderSent      Boolean     @default(false)
 
   // Host Information
   host              Host        @relation(fields: [hostId], references: [id])
@@ -215,6 +214,7 @@ model EventParticipant {
   // Participation Status
   joinStatus    JoinStatus    @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
+  reminderSent  Boolean       @default(false)
 
   // Timestamps
   createdAt DateTime @default(now())

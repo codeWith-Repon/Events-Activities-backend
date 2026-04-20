@@ -26,7 +26,6 @@ model Event {
 
   // Event Status
   status            EventStatus @default(OPEN)
-  reminderSent      Boolean     @default(false)
 
   // Host Information
   host              Host        @relation(fields: [hostId], references: [id])
@@ -63,6 +62,7 @@ model EventParticipant {
   // Participation Status
   joinStatus    JoinStatus    @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
+  reminderSent  Boolean       @default(false)
 
   // Timestamps
   createdAt DateTime @default(now())
