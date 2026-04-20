@@ -423,6 +423,184 @@ Validates payment via Instant Payment Notification.
 
 ---
 
+## 7. Ratings `/api/v1/ratings`
+
+> **Business rules:**
+> - A user can only rate an event they **participated in** (must have a valid `eventParticipant` record).
+> - The event must be in **COMPLETED** status before a rating can be submitted.
+> - A host **cannot** rate their own event.
+> - Each user can submit **one rating per event**. Use `PATCH` to update it.
+> - On every create / update / delete, the **host's overall rating** (average across all their completed-event ratings) is automatically recalculated and saved on the `Host` record.
+
+---
+
+### `POST /ratings/create`
+**Auth required (any role)**
+
+```json
+// Request
+{
+  "participantId": "uuid",   // your eventParticipant record ID
+  "rating": 4,               // integer 1–5
+  "review": "Great event!"   // optional, max 500 chars
+}
+
+// Response 201
+{
+  "data": {
+    "id": "uuid",
+    "eventId": "uuid",
+    "userId": "uuid",
+    "participantId": "uuid",
+    "rating": 4,
+    "review": "Great event!",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp",
+    "rater": { "id": "uuid", "name": "string", "email": "string", "profileImage": "url | null" },
+    "event": { "id": "uuid", "title": "string", "slug": "string" }
+  }
+}
+```
+
+**Error cases**
+
+| Status | Reason |
+|--------|--------|
+| 404    | Participant record not found |
+| 403    | Authenticated user is not the participant |
+| 400    | Event is not COMPLETED yet |
+| 400    | User is the host of the event |
+| 409    | Rating already exists for this event — use PATCH |
+
+---
+
+### `GET /ratings/events/:eventId`
+**Public**
+
+Returns paginated ratings for a specific event. The `meta` object includes `avgRating` — the mean rating across **all** reviews for that event (not affected by active filters).
+
+| Query Param    | Type   | Description                                    |
+|----------------|--------|------------------------------------------------|
+| `page`         | number | Default: 1                                     |
+| `limit`        | number | Default: 10                                    |
+| `sortBy`       | string | Default: `createdAt`                           |
+| `sortOrder`    | string | `asc` or `desc`                                |
+| `searchTerm`   | string | Searches `review`, `event.title`, `rater.name`, `rater.email` |
+| `rating`       | number | Filter by exact star value (`1`–`5`)           |
+| `participantId`| string | Filter by participant UUID                     |
+
+```json
+// Response
+{
+  "meta": { "page": 1, "limit": 10, "totalPage": 3, "total": 25, "avgRating": 4.2 },
+  "data": [
+    {
+      "id": "uuid",
+      "rating": 4,
+      "review": "string | null",
+      "createdAt": "timestamp",
+      "rater": { "id": "uuid", "name": "string", "email": "string", "profileImage": "url | null" },
+      "event": { "id": "uuid", "title": "string", "slug": "string" }
+    }
+  ]
+}
+```
+
+---
+
+### `GET /ratings/users/:userId`
+**Public**
+
+Returns paginated ratings submitted by a specific user.
+
+| Query Param    | Type   | Description                                    |
+|----------------|--------|------------------------------------------------|
+| `page`         | number | Default: 1                                     |
+| `limit`        | number | Default: 10                                    |
+| `sortBy`       | string | Default: `createdAt`                           |
+| `sortOrder`    | string | `asc` or `desc`                                |
+| `searchTerm`   | string | Searches `review`, `event.title`, `rater.name`, `rater.email` |
+| `rating`       | number | Filter by exact star value (`1`–`5`)           |
+| `eventId`      | string | Filter by event UUID                           |
+| `participantId`| string | Filter by participant UUID                     |
+
+```json
+// Response
+{
+  "meta": { "page": 1, "limit": 10, "totalPage": 1, "total": 3 },
+  "data": [
+    {
+      "id": "uuid",
+      "rating": 5,
+      "review": "string | null",
+      "createdAt": "timestamp",
+      "event": {
+        "id": "uuid",
+        "title": "string",
+        "slug": "string",
+        "host": { "user": { "name": "string", "email": "string" } }
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `GET /ratings/:ratingId`
+**Public**
+
+Returns a single rating by UUID.
+
+```json
+// Response
+{
+  "data": {
+    "id": "uuid",
+    "rating": 4,
+    "review": "string | null",
+    "eventId": "uuid",
+    "userId": "uuid",
+    "participantId": "uuid",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp",
+    "rater": { "id": "uuid", "name": "string", "email": "string", "profileImage": "url | null" },
+    "event": { "id": "uuid", "title": "string", "slug": "string" }
+  }
+}
+```
+
+---
+
+### `PATCH /ratings/:ratingId`
+**Auth required — rating creator only**
+
+At least one field must be provided.
+
+```json
+// Request
+{
+  "rating": 5,              // optional, integer 1–5
+  "review": "Updated text"  // optional, max 500 chars, send empty string to clear
+}
+```
+
+> If `rating` value changes, the host's overall average is automatically recalculated.
+
+---
+
+### `DELETE /ratings/:ratingId`
+**Auth required — rating creator only**
+
+Deletes the rating and recalculates the host's overall average rating.
+
+```json
+// Response
+{ "data": null, "message": "Rating deleted successfully" }
+```
+
+---
+
 ## Enums Reference
 
 | Enum             | Values                                                      |
@@ -468,3 +646,9 @@ Validates payment via Instant Payment Notification.
 | `POST`   | `/payment/cancel`                          | Webhook          | ✅     |
 | `POST`   | `/payment/validate-payment`               | Webhook          | ✅     |
 | `GET`    | `/dashboard/meta-data`                     | ADMIN+           | ❌     |
+| `POST`   | `/ratings/create`                          | Any role         | ❌     |
+| `GET`    | `/ratings/events/:eventId`                 | —                | ✅     |
+| `GET`    | `/ratings/users/:userId`                   | —                | ✅     |
+| `GET`    | `/ratings/:ratingId`                       | —                | ✅     |
+| `PATCH`  | `/ratings/:ratingId`                       | Creator only     | ❌     |
+| `DELETE` | `/ratings/:ratingId`                       | Creator only     | ❌     |

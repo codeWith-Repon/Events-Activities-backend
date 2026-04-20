@@ -1,8 +1,10 @@
 fix/database
+event_reviews_ratings
+
 
 Core Features
 
-Event Reviews & Ratings — participants rate events after completion
+
 Waitlist System — auto-approve when a spot opens up
 Event Invitations — host invites specific users via email/link
 Recurring Events — weekly/monthly event scheduling
