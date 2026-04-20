@@ -3,6 +3,7 @@ import { prisma } from "../../../lib/prisma";
 import { Event, EventStatus, JoinStatus, NotificationType, Prisma, User, UserRole } from "../../../generated/prisma/client";
 import { notify } from "../notification/notification.service";
 import { buildEventCancelledEmail } from "../../utils/emailTemplates";
+import { getEventHost } from "../../utils/isEventHost";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { generateSlug } from "../../utils/generateSlug";
@@ -192,13 +193,8 @@ const updateEvent = async (
         throw new AppError(status.NOT_FOUND, "Event not found");
     }
 
-    const host = await prisma.host.findUnique({
-        where: {
-            userId
-        }
-    })
-
-    if (!host || existingEvent.hostId !== host.id) {
+    const hostInfo = await getEventHost(userId, existingEvent.id);
+    if (!hostInfo) {
         throw new AppError(status.FORBIDDEN, "You are not allowed to update this event");
     }
 
@@ -261,28 +257,13 @@ const updateEvent = async (
 const deleteEvent = async (slug: string, decodedToken: JwtPayload) => {
     const { userId } = decodedToken
 
-    const host = await prisma.host.findUnique({
-        where: {
-            userId
-        }
-    })
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
 
-    if (!host) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event");
-    }
-
-    const event = await prisma.event.findUnique({
-        where: {
-            slug
-        }
-    })
-
-    if (!event) {
-        throw new AppError(status.NOT_FOUND, "Event not found");
-    }
-
-    if (event.hostId !== host.id) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event");
+    // Only primary host can delete
+    const hostInfo = await getEventHost(userId, event.id);
+    if (!hostInfo?.isPrimary) {
+        throw new AppError(status.FORBIDDEN, "Only the primary host can delete an event");
     }
     await prisma.event.delete({
         where: {

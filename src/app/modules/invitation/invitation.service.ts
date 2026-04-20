@@ -8,13 +8,11 @@ import { ISendInvitation } from "./invitation.interface";
 import { INVITATION_EXPIRY_DAYS } from "./invitation.constants";
 import { sendEmail } from "../../utils/sendEmail";
 import { buildInvitationEmail } from "../../utils/emailTemplates";
+import { getEventHost } from "../../utils/isEventHost";
 import { envVars } from "../../config/env";
 
 const sendInvitation = async (payload: ISendInvitation, decodedToken: JwtPayload) => {
   const userId = decodedToken.userId as string;
-
-  const host = await prisma.host.findUnique({ where: { userId } });
-  if (!host) throw new AppError(status.FORBIDDEN, "Only hosts can send invitations");
 
   const event = await prisma.event.findUnique({
     where: { id: payload.eventId },
@@ -22,7 +20,9 @@ const sendInvitation = async (payload: ISendInvitation, decodedToken: JwtPayload
   });
 
   if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
-  if (event.hostId !== host.id) throw new AppError(status.FORBIDDEN, "You can only invite to your own events");
+
+  const hostInfo = await getEventHost(userId, event.id);
+  if (!hostInfo) throw new AppError(status.FORBIDDEN, "Only hosts can send invitations");
 
   const blockedStatuses: EventStatus[] = [EventStatus.CANCELLED, EventStatus.COMPLETED];
   if (blockedStatuses.includes(event.status)) {
@@ -50,7 +50,7 @@ const sendInvitation = async (payload: ISendInvitation, decodedToken: JwtPayload
     update: { token, status: InvitationStatus.PENDING, expiresAt },
     create: {
       eventId: payload.eventId,
-      hostId: host.id,
+      hostId: hostInfo.hostId,
       email: payload.email,
       token,
       expiresAt

@@ -14,6 +14,7 @@ import {
     buildWaitlistPromotedEmail
 } from "../../utils/emailTemplates";
 import { generateCheckInToken } from "../checkin/checkin.service";
+import { getEventHost } from "../../utils/isEventHost";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -323,14 +324,12 @@ const updateEventParticipantById = async (
             return { participant: updated, notifyTarget: null, promoted };
         }
 
-        // 3. host rejects a participant
-        const isHostExist = await tx.host.findUnique({ where: { userId: decodedToken.userId } });
-        if (!isHostExist) throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
+        // 3. host or co-host updates a participant
+        const hostInfo = await getEventHost(decodedToken.userId, isParticipantExist.eventId, tx);
+        if (!hostInfo) throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
 
         const participantEvent = await tx.event.findUnique({ where: { id: isParticipantExist.eventId } });
-        if (!participantEvent || isHostExist.id !== participantEvent.hostId) {
-            throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
-        }
+        if (!participantEvent) throw new AppError(status.NOT_FOUND, "Event not found");
 
         const prevJoinStatus = isParticipantExist.joinStatus;
 
@@ -374,27 +373,14 @@ const updateEventParticipantById = async (
 };
 
 const deleteEventParticipantById = async (id: string, decodedToken: JwtPayload) => {
-
-    const isHostExist = await prisma.host.findUnique({
-        where: {
-            userId: decodedToken.userId
-        }
-    })
-
-    if (!isHostExist) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
-    }
-
-    const isParticipantExist = await prisma.eventParticipant.findUnique({
-        where: { id },
-    });
+    const isParticipantExist = await prisma.eventParticipant.findUnique({ where: { id } });
 
     if (!isParticipantExist) {
         throw new AppError(status.NOT_FOUND, "Event participant not found");
     }
 
-    const participantEvent = await prisma.event.findUnique({ where: { id: isParticipantExist.eventId } });
-    if (!participantEvent || isHostExist.id !== participantEvent.hostId) {
+    const hostInfo = await getEventHost(decodedToken.userId, isParticipantExist.eventId);
+    if (!hostInfo) {
         throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
     }
 

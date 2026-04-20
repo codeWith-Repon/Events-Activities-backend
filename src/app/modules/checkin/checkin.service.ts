@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { JoinStatus } from "../../../generated/prisma/client";
+import { getEventHost } from "../../utils/isEventHost";
 
 export const generateCheckInToken = () => crypto.randomBytes(16).toString("hex");
 
@@ -45,10 +46,8 @@ const checkIn = async (token: string, decodedToken: JwtPayload) => {
     throw new AppError(status.BAD_REQUEST, "Participant is not approved");
   }
 
-  const host = await prisma.host.findUnique({ where: { userId: decodedToken.userId } });
-  if (!host || host.id !== participant.event.hostId) {
-    throw new AppError(status.FORBIDDEN, "Only the event host can check in participants");
-  }
+  const hostInfo = await getEventHost(decodedToken.userId, participant.event.id);
+  if (!hostInfo) throw new AppError(status.FORBIDDEN, "Only the event host can check in participants");
 
   const eventDate = new Date(participant.event.date);
   const now = new Date();
@@ -65,12 +64,11 @@ const checkIn = async (token: string, decodedToken: JwtPayload) => {
 };
 
 const getEventAttendance = async (eventId: string, decodedToken: JwtPayload) => {
-  const host = await prisma.host.findUnique({ where: { userId: decodedToken.userId } });
-  if (!host) throw new AppError(status.FORBIDDEN, "Only hosts can view attendance");
-
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
-  if (event.hostId !== host.id) throw new AppError(status.FORBIDDEN, "Not your event");
+
+  const hostInfo = await getEventHost(decodedToken.userId, eventId);
+  if (!hostInfo) throw new AppError(status.FORBIDDEN, "Only hosts can view attendance");
 
   const participants = await prisma.eventParticipant.findMany({
     where: { eventId, joinStatus: JoinStatus.APPROVED },
