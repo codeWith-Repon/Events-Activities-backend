@@ -16,6 +16,12 @@ const getMetaData = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+const getRevenueReport = catchAsync(async (req: Request, res: Response) => {
+    const result = await AdminService.getRevenueReport();
+    sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Revenue report retrieved", data: result });
+});
+
 export const AdminController: Record<string, any> = {
-    getMetaData
+    getMetaData,
+    getRevenueReport
 }

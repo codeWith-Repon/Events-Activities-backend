@@ -151,6 +151,50 @@ const getAdminDashboardMetaData = async (query: any) => {
     }
 }
 
+const getRevenueReport = async () => {
+    const [topEvents, topHosts, monthlyRevenue] = await Promise.all([
+        prisma.payment.groupBy({
+            by: ["eventId"],
+            where: { paymentStatus: PaymentStatus.PAID },
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: "desc" } },
+            take: 10
+        }).then(async (rows) => {
+            const eventIds = rows.map(r => r.eventId);
+            const events = await prisma.event.findMany({
+                where: { id: { in: eventIds } },
+                select: { id: true, title: true, slug: true }
+            });
+            const map = Object.fromEntries(events.map(e => [e.id, e]));
+            return rows.map(r => ({ ...map[r.eventId], revenue: r._sum.amount ?? 0 }));
+        }),
+
+        prisma.$queryRaw<{ hostId: string; name: string; revenue: number }[]>`
+            SELECT h.id AS "hostId", u.name, COALESCE(SUM(p.amount), 0)::float AS revenue
+            FROM hosts h
+            JOIN users u ON u.id = h."userId"
+            LEFT JOIN payments p ON p."eventId" IN (
+                SELECT id FROM events WHERE "hostId" = h.id
+            ) AND p."paymentStatus" = 'PAID'
+            GROUP BY h.id, u.name
+            ORDER BY revenue DESC
+            LIMIT 10
+        `,
+
+        prisma.$queryRaw<{ month: string; revenue: number }[]>`
+            SELECT TO_CHAR(DATE_TRUNC('month', "createdAt"), 'YYYY-MM') AS month,
+                   COALESCE(SUM(amount), 0)::float AS revenue
+            FROM payments
+            WHERE "paymentStatus" = 'PAID'
+            GROUP BY month
+            ORDER BY month ASC
+        `
+    ]);
+
+    return { topEvents, topHosts, monthlyRevenue };
+};
+
 export const AdminService = {
-    getAdminDashboardMetaData
+    getAdminDashboardMetaData,
+    getRevenueReport
 }
