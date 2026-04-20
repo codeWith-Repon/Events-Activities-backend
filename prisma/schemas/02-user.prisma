@@ -44,6 +44,7 @@ model Host {
   // Host Metadata
   rating            Float  @default(0)
   totalEventsHosted Int    @default(0)
+  isVerified        Boolean @default(false)
 
   // Timestamps
   createdAt DateTime @default(now())

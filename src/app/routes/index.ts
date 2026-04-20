@@ -11,6 +11,7 @@ import { notificationRoutes } from "../modules/notification/notification.route";
 import { checkinRoutes } from "../modules/checkin/checkin.route";
 import { cohostRoutes } from "../modules/cohost/cohost.route";
 import { reportRoutes } from "../modules/report/report.route";
+import { hostRoutes } from "../modules/host/host.route";
 
 
 export const router: Router = Router()
@@ -63,6 +64,10 @@ const moduleRoutes = [
     {
         path: '/reports',
         route: reportRoutes
+    },
+    {
+        path: '/hosts',
+        route: hostRoutes
     }
 ]
 
