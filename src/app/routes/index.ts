@@ -5,6 +5,7 @@ import { EventsRoutes } from "../modules/events/events.route";
 import { EventParticipantRoutes } from "../modules/eventParticipant/eventParticipant.route";
 import { PaymentRoutes } from "../modules/payment/payment.route";
 import { MetaRoutes } from "../modules/meta/meta.route";
+import { ratingRoutes } from "../modules/rating/rating.route";
 
 
 export const router: Router = Router()
@@ -33,6 +34,10 @@ const moduleRoutes = [
     {
         path: "/dashboard",
         route: MetaRoutes
+    },
+    {
+        path: '/ratings',
+        route: ratingRoutes
     }
 ]
 
