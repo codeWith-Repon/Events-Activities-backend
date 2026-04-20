@@ -885,6 +885,92 @@ Returns a full attendance summary for an event.
 
 ---
 
+## 11. Co-hosts `/api/v1/co-hosts`
+
+Allows a primary host to delegate event management to other hosts. Co-hosts share most host permissions except deleting the event or managing other co-hosts.
+
+**Co-host permissions:**
+| Action | Primary Host | Co-host |
+|---|---|---|
+| Update event details | ✅ | ✅ |
+| Approve / reject participants | ✅ | ✅ |
+| Check in participants | ✅ | ✅ |
+| Send invitations | ✅ | ✅ |
+| View attendance | ✅ | ✅ |
+| Delete event | ✅ | ❌ |
+| Add / remove co-hosts | ✅ | ❌ |
+
+---
+
+### `GET /co-hosts/events/:eventId`
+**Public**
+
+Lists all co-hosts assigned to an event.
+
+```json
+// Response
+{
+  "data": [
+    {
+      "id": "string",
+      "eventId": "string",
+      "hostId": "string",
+      "assignedAt": "2026-05-01T10:00:00.000Z",
+      "host": {
+        "user": { "name": "Jane Doe", "email": "jane@example.com", "profileImage": "url" }
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `POST /co-hosts/events/:eventId`
+**Auth required — primary host only**
+
+Assigns a host as co-host for an event. The target user must already have a host account.
+
+```json
+// Request
+{ "userId": "target-user-uuid" }
+
+// Response
+{
+  "data": {
+    "id": "string",
+    "eventId": "string",
+    "hostId": "string",
+    "assignedAt": "2026-05-01T10:00:00.000Z",
+    "host": {
+      "user": { "name": "Jane Doe", "email": "jane@example.com", "profileImage": "url" }
+    }
+  }
+}
+```
+
+**Error cases:**
+| Status | Reason |
+|--------|--------|
+| `403`  | Caller is not the primary host of this event |
+| `404`  | Target user is not a host |
+| `400`  | Target user is the primary host (already owns the event) |
+| `400`  | User is already a co-host |
+
+---
+
+### `DELETE /co-hosts/events/:eventId/:hostId`
+**Auth required — primary host only**
+
+Removes a co-host from an event. `:hostId` is the `Host.id` (not `userId`).
+
+```json
+// Response
+{ "data": null, "message": "Co-host removed" }
+```
+
+---
+
 ## Enums Reference
 
 | Enum             | Values                                                      |
@@ -945,6 +1031,9 @@ Returns a full attendance summary for an event.
 | `GET`    | `/check-in/qr/:participantId`              | Participant/Host | ❌     |
 | `POST`   | `/check-in`                                | Host only        | ❌     |
 | `GET`    | `/check-in/attendance/:eventId`            | Host only        | ❌     |
+| `GET`    | `/co-hosts/events/:eventId`                | —                | ✅     |
+| `POST`   | `/co-hosts/events/:eventId`                | Primary host     | ❌     |
+| `DELETE` | `/co-hosts/events/:eventId/:hostId`        | Primary host     | ❌     |
 | `POST`   | `/ratings/create`                          | Any role         | ❌     |
 | `GET`    | `/ratings/events/:eventId`                 | —                | ✅     |
 | `GET`    | `/ratings/users/:userId`                   | —                | ✅     |
