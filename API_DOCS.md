@@ -424,7 +424,124 @@ Validates payment via Instant Payment Notification.
 
 ---
 
-## 7. Ratings `/api/v1/ratings`
+## 7. Invitations `/api/v1/invitations`
+
+> **Business rules:**
+> - Only the event's **host** can send, revoke, or list invitations.
+> - Invitations expire after **7 days**. Accepting an expired token returns `410 Gone`.
+> - One active invitation per email per event. Re-inviting after `DECLINED` or `REVOKED` creates a fresh invitation (new token).
+> - Accepting an invitation auto-sets `joinStatus: APPROVED` regardless of event capacity — the host chose to invite them.
+> - For **paid** events the accepted participant still needs to complete payment (`paymentStatus` stays `PENDING`).
+> - If SMTP env vars are not set, no email is sent but the `inviteLink` is still returned in the API response.
+
+---
+
+### `POST /invitations/send`
+**Auth required — host only**
+
+```json
+// Request
+{ "eventId": "uuid", "email": "invitee@example.com" }
+
+// Response 201
+{
+  "data": {
+    "invitation": {
+      "id": "uuid",
+      "eventId": "uuid",
+      "hostId": "uuid",
+      "email": "invitee@example.com",
+      "token": "hex-string",
+      "status": "PENDING",
+      "expiresAt": "timestamp",
+      "createdAt": "timestamp"
+    },
+    "inviteLink": "https://your-frontend.com/events/invite/accept?token=..."
+  }
+}
+```
+
+| Status | Reason |
+|--------|--------|
+| 403    | Authenticated user is not a host, or does not own the event |
+| 404    | Event not found |
+| 400    | Event is CANCELLED or COMPLETED |
+| 409    | Active invitation already exists for this email |
+
+---
+
+### `POST /invitations/accept/:token`
+**Auth required (any role)**
+
+The frontend extracts `token` from the invite link query param and calls this endpoint after the user logs in.
+
+```json
+// Response 200
+{
+  "data": {
+    "id": "uuid",
+    "eventId": "uuid",
+    "userId": "uuid",
+    "joinStatus": "APPROVED",
+    "paymentStatus": "PAID | PENDING",
+    "createdAt": "timestamp"
+  }
+}
+```
+
+| Status | Reason |
+|--------|--------|
+| 404    | Token not found |
+| 400    | Invitation already accepted / declined / revoked |
+| 410    | Invitation has expired |
+| 400    | Event is CANCELLED or COMPLETED |
+| 409    | User has already joined the event |
+
+---
+
+### `POST /invitations/decline/:token`
+**Auth required (any role)**
+
+```json
+// Response 200 — returns updated invitation with status: "DECLINED"
+```
+
+---
+
+### `PATCH /invitations/revoke/:invitationId`
+**Auth required — host only**
+
+Cancels a pending invitation. The token becomes invalid.
+
+```json
+// Response 200 — returns updated invitation with status: "REVOKED"
+```
+
+---
+
+### `GET /invitations/events/:eventId`
+**Auth required — host only**
+
+Returns all invitations for the given event (all statuses), newest first.
+
+```json
+// Response 200
+{
+  "data": [
+    {
+      "id": "uuid",
+      "email": "string",
+      "status": "PENDING | ACCEPTED | DECLINED | REVOKED",
+      "expiresAt": "timestamp",
+      "createdAt": "timestamp"
+    }
+  ]
+}
+```
+
+---
+
+## 8. Ratings `/api/v1/ratings`
 
 > **Business rules:**
 > - A user can only rate an event they **participated in** (must have a valid `eventParticipant` record).
@@ -610,7 +727,8 @@ Deletes the rating and recalculates the host's overall average rating.
 | **UserStatus**   | `ACTIVE`, `INACTIVE`, `BLOCKED`                             |
 | **Gender**       | `MALE`, `FEMALE`                                            |
 | **EventStatus**  | `OPEN`, `FULL`, `CANCELLED`, `COMPLETED`                    |
-| **JoinStatus**   | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `WAITLISTED` |
+| **JoinStatus**       | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `WAITLISTED` |
+| **InvitationStatus** | `PENDING`, `ACCEPTED`, `DECLINED`, `REVOKED`                 |
 | **PaymentStatus**| `PENDING`, `PAID`, `CANCELLED`, `REJECTED`, `FAILED`, `REFUNDED` |
 
 ---
@@ -647,6 +765,11 @@ Deletes the rating and recalculates the host's overall average rating.
 | `POST`   | `/payment/cancel`                          | Webhook          | ✅     |
 | `POST`   | `/payment/validate-payment`               | Webhook          | ✅     |
 | `GET`    | `/dashboard/meta-data`                     | ADMIN+           | ❌     |
+| `POST`   | `/invitations/send`                        | Host only        | ❌     |
+| `POST`   | `/invitations/accept/:token`               | Any role         | ❌     |
+| `POST`   | `/invitations/decline/:token`              | Any role         | ❌     |
+| `PATCH`  | `/invitations/revoke/:invitationId`        | Host only        | ❌     |
+| `GET`    | `/invitations/events/:eventId`             | Host only        | ❌     |
 | `POST`   | `/ratings/create`                          | Any role         | ❌     |
 | `GET`    | `/ratings/events/:eventId`                 | —                | ✅     |
 | `GET`    | `/ratings/users/:userId`                   | —                | ✅     |

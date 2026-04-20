@@ -1,11 +1,9 @@
 fix/database
 event_reviews_ratings
 (whitlist_system)
+(invite)
 
-Core Features
 
-Event Invitations — host invites specific users via email/link
-Recurring Events — weekly/monthly event scheduling
 Social Features
 5. Follow System — follow hosts, get notified of their new events
 6. Event Comments/Discussion — public Q&A thread per event
