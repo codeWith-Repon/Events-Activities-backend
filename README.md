@@ -156,7 +156,7 @@ JWT_REFRESH_EXPIRES=30d
 # SSLCommerz
 SSL_STORE_ID=your_store_id
 SSL_STORE_PASS=your_store_password
-SSL_PAYMENT_API=https://sandbox.sslcommerz.com/gwprocess/v3/api.php
+SSL_PAYMENT_API=https://sandbox.sslcommerz.com/gwprocess/v4/api.php
 SSL_VALIDATION_API=https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
 
 SSL_IPN_API=http://localhost:5000/api/v1/payment/validate-payment
