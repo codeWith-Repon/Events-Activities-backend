@@ -63,7 +63,14 @@ const paymentInit = async (participantId: string) => {
     const sslPayment = await SSLService.sslPaymentInit(sslPayload);
 
     if (!sslPayment?.GatewayPageURL) {
-        throw new AppError(status.INTERNAL_SERVER_ERROR, "Failed to initialize SSLCommerz gateway");
+        // SSLCommerz answers 200 with its own status/failedreason, so surface
+        // that instead of a blanket message you cannot act on.
+        console.error("SSLCommerz init failed:", JSON.stringify(sslPayment)?.slice(0, 600));
+        const reason = sslPayment?.failedreason || sslPayment?.status || "no GatewayPageURL returned";
+        throw new AppError(
+            status.INTERNAL_SERVER_ERROR,
+            `Failed to initialize SSLCommerz gateway: ${reason}`
+        );
     }
 
     return {
