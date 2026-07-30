@@ -12,4 +12,10 @@ router.get(
     AdminController.getMetaData
 )
 
+router.get(
+    "/revenue-report",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    AdminController.getRevenueReport
+)
+
 export const MetaRoutes = router

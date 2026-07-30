@@ -177,11 +177,48 @@ const deleteUser = async (userId: string) => {
     }
 }
 
+const updateUserStatus = async (userId: string, newStatus: string) => {
+    const user = await prisma.user.findUnique({ where: { id: userId, isDeleted: false } });
+    if (!user) throw new AppError(status.NOT_FOUND, "User not found");
+
+    const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { status: newStatus as any }
+    });
+    return sanitizeUser(updated, ["password"]);
+};
+
+const changeUserRole = async (userId: string, newRole: string) => {
+    const user = await prisma.user.findUnique({ where: { id: userId, isDeleted: false } });
+    if (!user) throw new AppError(status.NOT_FOUND, "User not found");
+
+    const updated = await prisma.$transaction(async (tx) => {
+        const updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: { role: newRole as any }
+        });
+
+        if (newRole === "HOST") {
+            await tx.host.upsert({
+                where: { userId },
+                update: {},
+                create: { userId }
+            });
+        }
+
+        return updatedUser;
+    });
+
+    return sanitizeUser(updated, ["password"]);
+};
+
 export const UserService = {
     createUser,
     getAllUsers,
     getUserById,
     updateUser,
     getMe,
-    deleteUser
+    deleteUser,
+    updateUserStatus,
+    changeUserRole
 }

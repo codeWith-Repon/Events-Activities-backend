@@ -36,9 +36,21 @@ router.patch(
 )
 
 router.get(
+    "/:slug/analytics",
+    checkAuth(UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    EventsController.getEventAnalytics
+)
+
+router.get(
     "/:slug",
     EventsController.getEventBySlug
 )
+router.patch(
+    "/:eventId/force-cancel",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    EventsController.adminCancelEvent
+)
+
 router.delete(
     "/:slug",
     checkAuth(UserRole.USER, UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),

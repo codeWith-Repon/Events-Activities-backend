@@ -39,6 +39,18 @@ router.delete(
 );
 
 router.patch(
+    "/:userId/status",
+    checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    UserController.updateUserStatus
+);
+
+router.patch(
+    "/:userId/role",
+    checkAuth(UserRole.SUPER_ADMIN),
+    UserController.changeUserRole
+);
+
+router.patch(
     "/",
     checkAuth(UserRole.USER, UserRole.HOST, UserRole.ADMIN, UserRole.SUPER_ADMIN),
     multerUpload.single("file"),

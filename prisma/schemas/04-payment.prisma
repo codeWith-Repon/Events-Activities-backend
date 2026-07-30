@@ -1,0 +1,38 @@
+// ========================================
+// PAYMENT MODELS
+// ========================================
+
+model Payment {
+  id String @id @default(uuid())
+
+  // Participant Reference
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  participant    EventParticipant? @relation(fields: [participantId], references: [id])
+  participantId  String?
+
+  // Payment Details
+  amount Float
+
+  // Transaction Information
+  transactionId      String        @unique
+  paymentStatus      PaymentStatus @default(PENDING)
+  paymentGatewayData String?       // SSLCommerz response data
+  invoiceUrl         String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes for payment lookups
+  @@index([transactionId])
+  @@index([paymentStatus])
+  @@index([participantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payments")
+}

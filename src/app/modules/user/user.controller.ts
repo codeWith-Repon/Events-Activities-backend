@@ -94,11 +94,23 @@ const deleteUser = catchAsync(
     }
 )
 
+const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
+    const result = await UserService.updateUserStatus(req.params.userId as string, req.body.status);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "User status updated", data: result });
+});
+
+const changeUserRole = catchAsync(async (req: Request, res: Response) => {
+    const result = await UserService.changeUserRole(req.params.userId as string, req.body.role);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "User role updated", data: result });
+});
+
 export const UserController: Record<string, any> = {
     createUser,
     getAllUsers,
     getUserById,
     updateUser,
     getMe,
-    deleteUser
+    deleteUser,
+    updateUserStatus,
+    changeUserRole
 }

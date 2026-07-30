@@ -1,0 +1,22 @@
+// ========================================
+// NOTIFICATION MODEL
+// ========================================
+
+model Notification {
+  id      String @id @default(uuid())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}

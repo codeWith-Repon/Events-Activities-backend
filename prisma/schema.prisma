@@ -1,3 +1,16 @@
+// ========================================
+// GENERATED SCHEMA - Do not edit manually!
+// ========================================
+// This file is auto-generated from /prisma/schemas/*.prisma
+// Edit the individual files in /prisma/schemas/ instead
+// Last generated: 2026-04-20T10:09:27.958Z
+//
+// To regenerate: npm run prisma:compile
+// ========================================
+
+
+// ============ From: 00-config.prisma ============
+
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
@@ -8,48 +21,12 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String    @id @default(uuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          UserRole  @default(USER)
-  isHost        Boolean   @default(false)
-  gender        Gender    @default(MALE)
-  dob           DateTime?
-  address       String?
-  contactNumber String?
-  bio           String?
-  profileImage  String?
-  status        Status    @default(ACTIVE)
-  isDeleted     Boolean   @default(false)
-  isVerified    Boolean   @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============ From: 01-enums.prisma ============
 
-  hosts             Host?
-  eventParticipants EventParticipant[]
-  payments          Payment[]
-
-  @@map("users")
-}
-
-model Host {
-  id                String @id @default(uuid())
-  userId            String @unique
-  user              User   @relation(fields: [userId], references: [id])
-  rating            Float  @default(0)
-  totalEventsHosted Int    @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  events            Event[]
-  eventParticipants EventParticipant[]
-
-  @@map("hosts")
-}
+// ========================================
+// ENUMS - All Enumeration Types
+// ========================================
 
 enum UserRole {
   SUPER_ADMIN
@@ -58,43 +35,15 @@ enum UserRole {
   HOST
 }
 
-enum Gender {
-  MALE
-  FEMALE
-}
-
-enum Status {
+enum UserStatus {
   ACTIVE
   INACTIVE
   BLOCKED
 }
 
-model Event {
-  id String @id @default(uuid())
-
-  title             String
-  slug              String      @unique
-  category          String
-  description       String
-  date              DateTime
-  time              String 
-  location          String
-  minParticipants   Int
-  maxParticipants   Int
-  totalParticipants Int         @default(0)
-  fee               Float       @default(0)
-  images            String[]
-  status            EventStatus @default(OPEN)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  host      Host     @relation(fields: [hostId], references: [id])
-  hostId    String
-
-  eventParticipants EventParticipant[]
-  payments          Payment[]
-
-  @@map("events")
+enum Gender {
+  MALE
+  FEMALE
 }
 
 enum EventStatus {
@@ -104,57 +53,12 @@ enum EventStatus {
   COMPLETED
 }
 
-model EventParticipant {
-  id String @id @default(uuid())
-
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id])
-
-  hostId String
-  host   Host   @relation(fields: [hostId], references: [id])
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  joinStatus    JoinStatus    @default(PENDING)
-  paymentStatus PaymentStatus @default(PENDING)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([eventId, userId])
-  @@map("event_participants")
-}
-
 enum JoinStatus {
   PENDING
   APPROVED
   REJECTED
   CANCELLED
-}
-
-model Payment {
-  id String @id @default(uuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id])
-
-  amount Float
-
-  transactionId String        @unique
-  paymentStatus PaymentStatus @default(PENDING)
-
-  paymentGatewayData String?
-
-  invoiceUrl String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("payments")
+  WAITLISTED
 }
 
 enum PaymentStatus {
@@ -165,3 +69,382 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum NotificationType {
+  EVENT_REMINDER
+  PARTICIPANT_APPROVED
+  PARTICIPANT_REJECTED
+  PARTICIPANT_WAITLISTED
+  WAITLIST_PROMOTED
+  EVENT_CANCELLED
+}
+
+enum ReportType {
+  EVENT
+  RATING
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+
+// ============ From: 02-user.prisma ============
+
+// ========================================
+// AUTH & USER MODELS
+// ========================================
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+
+  // Profile Information
+  role          UserRole  @default(USER)
+  gender        Gender?
+  dob           DateTime?
+  address       String?
+  contactNumber String?
+  bio           String?
+  profileImage  String?
+
+  // Account Status
+  status        UserStatus @default(ACTIVE)
+  isVerified    Boolean   @default(false)
+  isDeleted     Boolean   @default(false)
+
+  // Password Reset
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  hosts             Host?
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+  ratings           Rating[]         @relation("RatingsGiven")
+  notifications     Notification[]
+  reports           Report[]
+
+  @@map("users")
+}
+
+model Host {
+  id                String @id @default(uuid())
+  userId            String @unique
+
+  // Host Metadata
+  rating            Float  @default(0)
+  totalEventsHosted Int    @default(0)
+  isVerified        Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user           User              @relation(fields: [userId], references: [id])
+  events         Event[]
+  invitations    EventInvitation[]
+  coHostedEvents EventCoHost[]
+
+  @@map("hosts")
+}
+
+
+// ============ From: 03-event.prisma ============
+
+// ========================================
+// EVENT MODELS
+// ========================================
+
+model Event {
+  id String @id @default(uuid())
+
+  // Event Details
+  title             String
+  slug              String      @unique
+  category          String
+  description       String
+
+  // Date & Time
+  date              DateTime
+  time              String
+  location          String
+
+  // Capacity Management
+  minParticipants   Int
+  maxParticipants   Int
+
+  // Cost & Images
+  fee               Float       @default(0)
+  images            String[]
+
+  // Event Status
+  status            EventStatus @default(OPEN)
+  viewCount         Int         @default(0)
+
+  // Host Information
+  host              Host        @relation(fields: [hostId], references: [id])
+  hostId            String
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+  ratings           Rating[]
+  invitations       EventInvitation[]
+  coHosts           EventCoHost[]
+
+  // Indexes for common queries
+  @@index([status])
+  @@index([category])
+  @@index([hostId])
+  @@index([createdAt])
+  @@map("events")
+}
+
+model EventCoHost {
+  id      String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([eventId, hostId])
+  @@map("event_co_hosts")
+}
+
+model EventParticipant {
+  id String @id @default(uuid())
+
+  // Event & User Reference
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Participation Status
+  joinStatus    JoinStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  reminderSent  Boolean       @default(false)
+
+  // Attendance
+  checkInToken  String?   @unique
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments Payment[]
+  rating   Rating?
+
+  // Constraints: prevent duplicate participation
+  @@unique([eventId, userId])
+  @@index([joinStatus])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("event_participants")
+}
+
+
+// ============ From: 04-payment.prisma ============
+
+// ========================================
+// PAYMENT MODELS
+// ========================================
+
+model Payment {
+  id String @id @default(uuid())
+
+  // Participant Reference
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  participant    EventParticipant? @relation(fields: [participantId], references: [id])
+  participantId  String?
+
+  // Payment Details
+  amount Float
+
+  // Transaction Information
+  transactionId      String        @unique
+  paymentStatus      PaymentStatus @default(PENDING)
+  paymentGatewayData String?       // SSLCommerz response data
+  invoiceUrl         String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes for payment lookups
+  @@index([transactionId])
+  @@index([paymentStatus])
+  @@index([participantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+
+// ============ From: 05-rating.prisma ============
+
+// ========================================
+// RATING MODELS
+// ========================================
+
+model Rating {
+  id String @id @default(uuid())
+
+  // Relations - Event participation being rated
+  eventParticipant    EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId       String           @unique // One rating per participation
+
+  // Relations - The event being rated
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  // Relations - The person giving the rating
+  rater   User   @relation("RatingsGiven", fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  // Rating Data
+  rating Int     // 1-5 stars
+  review String? // Optional text review (max 500 chars enforced in validation)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Constraints & Indexes
+  @@unique([eventId, userId])  // One rating per user per event
+  @@index([userId])            // Find ratings by user
+  @@index([eventId])           // Find ratings for event
+  @@index([rating])            // Filter by rating value
+  @@index([createdAt])         // Sort by recency
+  @@map("ratings")
+}
+
+
+// ============ From: 06-invitation.prisma ============
+
+// ========================================
+// INVITATION MODEL
+// ========================================
+
+model EventInvitation {
+  id      String @id @default(uuid())
+
+  // Event & Host Reference
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  // Invitee email (may not have an account yet)
+  email  String
+
+  // Unique token used in the invitation link
+  token  String @unique
+
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One invitation per email per event
+  @@unique([eventId, email])
+  @@index([token])
+  @@index([eventId])
+  @@index([status])
+  @@map("event_invitations")
+}
+
+
+// ============ From: 07-notification.prisma ============
+
+// ========================================
+// NOTIFICATION MODEL
+// ========================================
+
+model Notification {
+  id      String @id @default(uuid())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+
+// ============ From: 08-report.prisma ============
+
+// ========================================
+// REPORT MODEL
+// ========================================
+
+model Report {
+  id         String       @id @default(uuid())
+
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reporterId String
+
+  type       ReportType
+  targetId   String       // eventId or ratingId depending on type
+  reason     String
+  status     ReportStatus @default(PENDING)
+  adminNote  String?
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([type, status])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+
+// ========================================
+// End of compiled schema
+// ========================================

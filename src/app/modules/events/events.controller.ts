@@ -95,11 +95,25 @@ const getAllEventsCategory = catchAsync(
     }
 )
 
+const getEventAnalytics = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await EventsService.getEventAnalytics(req.params.slug as string, req.user!)
+        sendResponse(res, { statusCode: status.OK, success: true, message: "Analytics retrieved", data: result })
+    }
+)
+
+const adminCancelEvent = catchAsync(async (req: Request, res: Response) => {
+    await EventsService.adminCancelEvent(req.params.eventId as string);
+    sendResponse(res, { statusCode: status.OK, success: true, message: "Event force-cancelled", data: null });
+});
+
 export const EventsController: Record<string, any> = {
     createEvent,
     getAllEvents,
     getEventBySlug,
     updateEvent,
     deleteEvent,
-    getAllEventsCategory
+    getAllEventsCategory,
+    getEventAnalytics,
+    adminCancelEvent
 }

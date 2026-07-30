@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { envVars } from "../config/env";
 import bcryptjs from "bcryptjs";
-import { Status, UserRole } from "../../generated/prisma/enums";
+import { UserStatus, UserRole } from "../../generated/prisma/enums";
 
 export const seedSuperAdmin = async () => {
     const isSuperAdminExist = await prisma.user.findFirst({
@@ -32,7 +32,7 @@ export const seedSuperAdmin = async () => {
         contactNumber: "xxxxxxxxxxxx",
         address: "xxxxxxxxxxxx",
         dob: new Date(),
-        status: Status.ACTIVE,
+        status: UserStatus.ACTIVE,
         isVerified: true,
         isDeleted: false,
     };

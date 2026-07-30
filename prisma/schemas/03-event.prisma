@@ -1,0 +1,103 @@
+// ========================================
+// EVENT MODELS
+// ========================================
+
+model Event {
+  id String @id @default(uuid())
+
+  // Event Details
+  title             String
+  slug              String      @unique
+  category          String
+  description       String
+
+  // Date & Time
+  date              DateTime
+  time              String
+  location          String
+
+  // Capacity Management
+  minParticipants   Int
+  maxParticipants   Int
+
+  // Cost & Images
+  fee               Float       @default(0)
+  images            String[]
+
+  // Event Status
+  status            EventStatus @default(OPEN)
+  viewCount         Int         @default(0)
+
+  // Host Information
+  host              Host        @relation(fields: [hostId], references: [id])
+  hostId            String
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  eventParticipants EventParticipant[]
+  payments          Payment[]
+  ratings           Rating[]
+  invitations       EventInvitation[]
+  coHosts           EventCoHost[]
+
+  // Indexes for common queries
+  @@index([status])
+  @@index([category])
+  @@index([hostId])
+  @@index([createdAt])
+  @@map("events")
+}
+
+model EventCoHost {
+  id      String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  host    Host   @relation(fields: [hostId], references: [id])
+  hostId  String
+
+  assignedAt DateTime @default(now())
+
+  @@unique([eventId, hostId])
+  @@map("event_co_hosts")
+}
+
+model EventParticipant {
+  id String @id @default(uuid())
+
+  // Event & User Reference
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Participation Status
+  joinStatus    JoinStatus    @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  reminderSent  Boolean       @default(false)
+
+  // Attendance
+  checkInToken  String?   @unique
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments Payment[]
+  rating   Rating?
+
+  // Constraints: prevent duplicate participation
+  @@unique([eventId, userId])
+  @@index([joinStatus])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("event_participants")
+}

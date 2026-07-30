@@ -181,7 +181,7 @@ SSL_CANCEL_FRONTEND_URL=http://localhost:3000/payment/cancel
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/codeWith-Repon/Events-Activities-backend.git
+git clone https://github.com/repon001/Events-Activities-backend.git
 cd Events-Activities-backend
 ```
 
@@ -240,7 +240,7 @@ pnpm lint      # Run ESLint
 ## 🧠 Author
 
 **Md Repon**
-GitHub: [https://github.com/codeWith-Repon](https://github.com/codeWith-Repon)
+GitHub: [https://github.com/repon001](https://github.com/repon001)
 
 ---
 

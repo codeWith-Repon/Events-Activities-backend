@@ -2,10 +2,19 @@ import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
-import { EventParticipant, EventStatus, JoinStatus, PaymentStatus, Prisma } from "../../../generated/prisma/client";
+import { EventParticipant, EventStatus, JoinStatus, NotificationType, PaymentStatus, Prisma } from "../../../generated/prisma/client";
 import { generateTransactionId } from "../../utils/generateTransactionId";
 import { IOptions, PaginationHelpers } from "../../helpers/paginatioHelper";
 import { eventParticipantSearchableFields } from "./eventParticipant.constants";
+import { notify } from "../notification/notification.service";
+import {
+    buildApprovalEmail,
+    buildRejectionEmail,
+    buildWaitlistedEmail,
+    buildWaitlistPromotedEmail
+} from "../../utils/emailTemplates";
+import { generateCheckInToken } from "../checkin/checkin.service";
+import { getEventHost } from "../../utils/isEventHost";
 
 interface CreateEventParticipantPayload {
     eventId: string;
@@ -32,7 +41,6 @@ const createEventParticipant = async (
 
         const blockedStatuses: EventStatus[] = [
             EventStatus.CANCELLED,
-            EventStatus.FULL,
             EventStatus.COMPLETED
         ];
 
@@ -50,24 +58,20 @@ const createEventParticipant = async (
         if (existsEventParticipant)
             throw new AppError(status.BAD_REQUEST, "Already joined this event");
 
+        const isFull = existsEvent.status === EventStatus.FULL;
+        const isFree = existsEvent.fee === 0;
 
-        // check user isHost status
-        const user = await tx.user.findUnique({
-            where: {
-                id: userId
-            }
-        })
-        const isFree = existsEvent.fee === 0
-
-        if (user?.isHost) {
-            await tx.user.update({
-                where: {
-                    id: userId
-                },
+        // FULL event → waitlist instead of rejecting
+        if (isFull) {
+            const waitlisted = await tx.eventParticipant.create({
                 data: {
-                    isHost: false
+                    userId,
+                    eventId: payload.eventId,
+                    joinStatus: JoinStatus.WAITLISTED,
+                    paymentStatus: PaymentStatus.PENDING
                 }
-            })
+            });
+            return { participant: waitlisted, eventTitle: existsEvent.title, joinStatus: JoinStatus.WAITLISTED };
         }
 
         // Create event participant
@@ -75,56 +79,46 @@ const createEventParticipant = async (
             data: {
                 userId,
                 eventId: payload.eventId,
-                hostId: existsEvent.hostId,
                 joinStatus: isFree ? JoinStatus.APPROVED : JoinStatus.PENDING,
-                paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING
+                paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING,
+                ...(isFree && { checkInToken: generateCheckInToken() })
             }
         });
 
-        // Update total participants
-
         if (isFree) {
+            const approvedCount = await tx.eventParticipant.count({
+                where: { eventId: existsEvent.id, joinStatus: JoinStatus.APPROVED }
+            });
 
-            if (existsEvent.totalParticipants >= existsEvent.maxParticipants) {
-                throw new AppError(status.BAD_REQUEST, "Event is already full");
-            }
-
-            const updatedEvent = await tx.event.update({
-                where: {
-                    id: existsEvent.id,
-                },
-                data: {
-                    totalParticipants: {
-                        increment: 1
-                    }
-                }
-            })
-
-            if (updatedEvent.totalParticipants === updatedEvent.maxParticipants) {
+            if (approvedCount >= existsEvent.maxParticipants) {
                 await tx.event.update({
-                    where: {
-                        id: existsEvent.id,
-                    },
-                    data: {
-                        status: EventStatus.FULL
-                    }
-                })
+                    where: { id: existsEvent.id },
+                    data: { status: EventStatus.FULL }
+                });
             }
         }
 
-        // Create payment safely
+        // Create payment record for paid events
         if (!isFree) await tx.payment.create({
             data: {
                 userId,
                 eventId: payload.eventId,
+                participantId: eventParticipant.id,
                 amount: existsEvent.fee,
                 transactionId: transactionId,
             }
         });
-        return eventParticipant;
+        return { participant: eventParticipant, eventTitle: existsEvent.title, joinStatus: eventParticipant.joinStatus };
     });
 
-    return result
+    // Fire notification after transaction (non-blocking)
+    if (result.joinStatus === JoinStatus.APPROVED) {
+        notify({ userId, type: NotificationType.PARTICIPANT_APPROVED, title: "You're in!", message: `Your spot for "${result.eventTitle}" has been confirmed.`, emailHtml: buildApprovalEmail(result.eventTitle) });
+    } else if (result.joinStatus === JoinStatus.WAITLISTED) {
+        notify({ userId, type: NotificationType.PARTICIPANT_WAITLISTED, title: "Added to waitlist", message: `You're on the waitlist for "${result.eventTitle}".`, emailHtml: buildWaitlistedEmail(result.eventTitle) });
+    }
+
+    return result.participant;
 };
 
 const getAllEventParticipants = async (filters: any, options: IOptions) => {
@@ -208,7 +202,7 @@ const getAllEventParticipants = async (filters: any, options: IOptions) => {
             event: {
                 select: {
                     id: true,
-                    title: true, slug: true, description: true, date: true, time: true, location: true, minParticipants: true, maxParticipants: true, images: true, fee: true, category: true, status: true, totalParticipants: true, hostId: true, host: {
+                    title: true, slug: true, description: true, date: true, time: true, location: true, minParticipants: true, maxParticipants: true, images: true, fee: true, category: true, status: true, hostId: true, host: {
                         include: {
                             user: {
                                 select: {
@@ -240,8 +234,14 @@ const getEventParticipantById = async (id: string) => {
         where: { id },
         include: {
             user: { select: { name: true, email: true, profileImage: true, role: true } },
-            event: { select: { title: true, description: true, date: true, time: true, location: true, fee: true, images: true, minParticipants: true, maxParticipants: true, totalParticipants: true, category: true, status: true } },
-            host: { include: { user: { select: { name: true, email: true, profileImage: true } } } },
+            event: {
+                select: {
+                    title: true, description: true, date: true, time: true, location: true,
+                    fee: true, images: true, minParticipants: true, maxParticipants: true,
+                    category: true, status: true,
+                    host: { include: { user: { select: { name: true, email: true, profileImage: true } } } }
+                }
+            },
         },
     });
 
@@ -252,12 +252,44 @@ const getEventParticipantById = async (id: string) => {
     return participant;
 };
 
+const autoApproveNextWaitlisted = async (
+    eventId: string,
+    tx: any
+): Promise<{ promotedUserId?: string; eventTitle?: string }> => {
+    const nextWaitlisted = await tx.eventParticipant.findFirst({
+        where: { eventId, joinStatus: JoinStatus.WAITLISTED },
+        orderBy: { createdAt: "asc" }
+    });
+
+    if (!nextWaitlisted) {
+        await tx.event.update({
+            where: { id: eventId },
+            data: { status: EventStatus.OPEN }
+        });
+        return {};
+    }
+
+    const event = await tx.event.findUnique({ where: { id: eventId } });
+    const isFree = event.fee === 0;
+
+    await tx.eventParticipant.update({
+        where: { id: nextWaitlisted.id },
+        data: {
+            joinStatus: JoinStatus.APPROVED,
+            paymentStatus: isFree ? PaymentStatus.PAID : PaymentStatus.PENDING,
+            checkInToken: generateCheckInToken()
+        }
+    });
+    // event stays FULL — one left, one approved
+    return { promotedUserId: nextWaitlisted.userId, eventTitle: event.title };
+};
+
 const updateEventParticipantById = async (
     eventParticipantId: string,
     decodedToken: JwtPayload,
     payload: Partial<EventParticipant>
 ) => {
-    return prisma.$transaction(async (tx) => {
+    const { participant, notifyTarget, promoted } = await prisma.$transaction(async (tx) => {
         // 1. find the event participant
         const isParticipantExist = await prisma.eventParticipant.findUnique({
             where: { id: eventParticipantId },
@@ -267,120 +299,88 @@ const updateEventParticipantById = async (
             throw new AppError(status.NOT_FOUND, "Participant not found");
         }
 
-        // 2. user can cancel his own participant status
-        const isUserExist = await tx.user.findUnique({
-            where: {
-                id: decodedToken.userId
-            }
-        })
+        // 2. user cancels their own participation
+        const isUserExist = await tx.user.findUnique({ where: { id: decodedToken.userId } });
+        if (!isUserExist) throw new AppError(status.NOT_FOUND, "User not found");
 
-        if (!isUserExist) {
-            throw new AppError(status.NOT_FOUND, "User not found");
-        }
+        if (isUserExist.id === isParticipantExist.userId && payload.joinStatus === JoinStatus.CANCELLED) {
+            const prevJoinStatus = isParticipantExist.joinStatus;
 
-        if (
-            isUserExist.id === isParticipantExist.userId
-            && payload.joinStatus === JoinStatus.CANCELLED
-        ) {
-            const updatedParticipant = await tx.eventParticipant.update({
+            const updated = await tx.eventParticipant.update({
                 where: { id: eventParticipantId },
-                data: {
-                    ...payload,
-                    paymentStatus: PaymentStatus.CANCELLED
-                }
-            })
-
-            // Find the payment record for this participant and event
-            const payment = await tx.payment.findFirst({
-                where: {
-                    userId: decodedToken.userId,
-                    eventId: isParticipantExist.eventId
-                }
+                data: { joinStatus: JoinStatus.CANCELLED, paymentStatus: PaymentStatus.CANCELLED }
             });
 
-            if (!payment) {
-                throw new AppError(status.NOT_FOUND, "Payment not found");
+            const payment = await tx.payment.findFirst({ where: { participantId: eventParticipantId } });
+            if (payment) {
+                await tx.payment.update({ where: { id: payment.id }, data: { paymentStatus: PaymentStatus.CANCELLED } });
             }
 
-            await tx.payment.update({
-                where: {
-                    id: payment.id
-                },
-                data: {
-                    paymentStatus: PaymentStatus.CANCELLED
-                }
-            });
-
-            return updatedParticipant
-        }
-
-        // 3. host can update participant status -> reject
-        const isHostExist = await tx.host.findUnique({
-            where: {
-                userId: decodedToken.userId
+            let promoted = {};
+            if (prevJoinStatus === JoinStatus.APPROVED) {
+                promoted = await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
             }
-        })
 
-        if (!isHostExist) {
-            throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
+            return { participant: updated, notifyTarget: null, promoted };
         }
 
-        if (isHostExist.id !== isParticipantExist.hostId) {
-            throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
-        }
+        // 3. host or co-host updates a participant
+        const hostInfo = await getEventHost(decodedToken.userId, isParticipantExist.eventId, tx);
+        if (!hostInfo) throw new AppError(status.FORBIDDEN, "You are not allowed to update this event participant");
 
-        const updatedParticipantStatus = await tx.eventParticipant.update({
+        const participantEvent = await tx.event.findUnique({ where: { id: isParticipantExist.eventId } });
+        if (!participantEvent) throw new AppError(status.NOT_FOUND, "Event not found");
+
+        const prevJoinStatus = isParticipantExist.joinStatus;
+
+        const isApproving = payload.joinStatus === JoinStatus.APPROVED;
+        const updated = await tx.eventParticipant.update({
             where: { id: eventParticipantId },
             data: {
                 ...payload,
-                paymentStatus: PaymentStatus.REJECTED
-            }
-        })
-
-        // Find the payment record for this participant and event
-        const payment = await tx.payment.findFirst({
-            where: {
-                eventId: isParticipantExist.eventId,
-                userId: decodedToken.userId
+                paymentStatus: isApproving ? isParticipantExist.paymentStatus : PaymentStatus.REJECTED,
+                ...(isApproving && { checkInToken: generateCheckInToken() })
             }
         });
 
+        const payment = await tx.payment.findFirst({ where: { participantId: eventParticipantId } });
         if (payment) {
-            await tx.payment.update({
-                where: {
-                    id: payment.id
-                },
-                data: {
-                    paymentStatus: PaymentStatus.REJECTED
-                }
-            });
+            await tx.payment.update({ where: { id: payment.id }, data: { paymentStatus: PaymentStatus.REJECTED } });
         }
 
-        return updatedParticipantStatus
-    })
+        let promoted = {};
+        if (prevJoinStatus === JoinStatus.APPROVED) {
+            promoted = await autoApproveNextWaitlisted(isParticipantExist.eventId, tx);
+        }
+
+        return {
+            participant: updated,
+            notifyTarget: { userId: isParticipantExist.userId, eventTitle: participantEvent.title },
+            promoted
+        };
+    });
+
+    // Fire notifications outside the transaction (non-blocking)
+    if (notifyTarget) {
+        notify({ userId: notifyTarget.userId, type: NotificationType.PARTICIPANT_REJECTED, title: "Request not approved", message: `Your request for "${notifyTarget.eventTitle}" was not approved.`, emailHtml: buildRejectionEmail(notifyTarget.eventTitle) });
+    }
+    const { promotedUserId, eventTitle } = promoted as { promotedUserId?: string; eventTitle?: string };
+    if (promotedUserId && eventTitle) {
+        notify({ userId: promotedUserId, type: NotificationType.WAITLIST_PROMOTED, title: "Spot opened up!", message: `You've been approved from the waitlist for "${eventTitle}".`, emailHtml: buildWaitlistPromotedEmail(eventTitle) });
+    }
+
+    return participant;
 };
 
 const deleteEventParticipantById = async (id: string, decodedToken: JwtPayload) => {
-
-    const isHostExist = await prisma.host.findUnique({
-        where: {
-            userId: decodedToken.userId
-        }
-    })
-
-    if (!isHostExist) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
-    }
-
-    const isParticipantExist = await prisma.eventParticipant.findUnique({
-        where: { id },
-    });
+    const isParticipantExist = await prisma.eventParticipant.findUnique({ where: { id } });
 
     if (!isParticipantExist) {
         throw new AppError(status.NOT_FOUND, "Event participant not found");
     }
 
-    if (isHostExist.id !== isParticipantExist.hostId) {
+    const hostInfo = await getEventHost(decodedToken.userId, isParticipantExist.eventId);
+    if (!hostInfo) {
         throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event participant");
     }
 

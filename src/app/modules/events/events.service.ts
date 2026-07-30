@@ -1,6 +1,9 @@
 import { JwtPayload } from "jsonwebtoken"
 import { prisma } from "../../../lib/prisma";
-import { Event, JoinStatus, Prisma, User, UserRole } from "../../../generated/prisma/client";
+import { Event, EventStatus, JoinStatus, NotificationType, Prisma, User, UserRole } from "../../../generated/prisma/client";
+import { notify } from "../notification/notification.service";
+import { buildEventCancelledEmail } from "../../utils/emailTemplates";
+import { getEventHost } from "../../utils/isEventHost";
 import AppError from "../../errorHelpers/AppError";
 import status from "http-status";
 import { generateSlug } from "../../utils/generateSlug";
@@ -27,14 +30,7 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
     return await prisma.$transaction(async (tx) => {
 
-        if (!user.isHost) {
-            await tx.user.update({
-                where: { id: userId },
-                data: { isHost: true }
-            })
-        }
-        // 3. convert USER -> HOST
-        // Admin / super admin role not touch 
+        // convert USER -> HOST role (admin/super_admin roles not changed)
         if (user.role === UserRole.USER) {
             await tx.user.update({
                 where: { id: userId },
@@ -156,27 +152,21 @@ const getAllEvents = async (filters: any, options: IOptions) => {
 
 const getEventBySlug = async (slug: string) => {
     const event = await prisma.event.findUnique({
-        where: {
-            slug
-        },
+        where: { slug },
         include: {
             host: {
                 include: {
-                    user: {
-                        select: {
-                            name: true,
-                            email: true,
-                            role: true,
-                            profileImage: true,
-                            gender: true
-                        }
-                    }
+                    user: { select: { name: true, email: true, role: true, profileImage: true, gender: true } }
                 }
             }
         }
-    })
+    });
 
-    return event
+    if (event) {
+        prisma.event.update({ where: { id: event.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+    }
+
+    return event;
 }
 
 const updateEvent = async (
@@ -197,13 +187,8 @@ const updateEvent = async (
         throw new AppError(status.NOT_FOUND, "Event not found");
     }
 
-    const host = await prisma.host.findUnique({
-        where: {
-            userId
-        }
-    })
-
-    if (!host || existingEvent.hostId !== host.id) {
+    const hostInfo = await getEventHost(userId, existingEvent.id);
+    if (!hostInfo) {
         throw new AppError(status.FORBIDDEN, "You are not allowed to update this event");
     }
 
@@ -245,41 +230,34 @@ const updateEvent = async (
 
 
     const updatedEvent = await prisma.event.update({
-        where: {
-            slug
-        },
+        where: { slug },
         data: prismaPayload
-    })
+    });
 
+    // Notify all approved participants when event is cancelled
+    if (payload.status === EventStatus.CANCELLED) {
+        const participants = await prisma.eventParticipant.findMany({
+            where: { eventId: updatedEvent.id, joinStatus: JoinStatus.APPROVED },
+            select: { userId: true }
+        });
+        participants.forEach(({ userId }) => {
+            notify({ userId, type: NotificationType.EVENT_CANCELLED, title: "Event cancelled", message: `"${updatedEvent.title}" has been cancelled by the host.`, emailHtml: buildEventCancelledEmail(updatedEvent.title) });
+        });
+    }
 
-    return updatedEvent
+    return updatedEvent;
 }
 
 const deleteEvent = async (slug: string, decodedToken: JwtPayload) => {
     const { userId } = decodedToken
 
-    const host = await prisma.host.findUnique({
-        where: {
-            userId
-        }
-    })
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
 
-    if (!host) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event");
-    }
-
-    const event = await prisma.event.findUnique({
-        where: {
-            slug
-        }
-    })
-
-    if (!event) {
-        throw new AppError(status.NOT_FOUND, "Event not found");
-    }
-
-    if (event.hostId !== host.id) {
-        throw new AppError(status.FORBIDDEN, "You are not allowed to delete this event");
+    // Only primary host can delete
+    const hostInfo = await getEventHost(userId, event.id);
+    if (!hostInfo?.isPrimary) {
+        throw new AppError(status.FORBIDDEN, "Only the primary host can delete an event");
     }
     await prisma.event.delete({
         where: {
@@ -300,11 +278,93 @@ const getAllEventsCategory = async () => {
     return events.map(e => e.category)
 }
 
+const getEventAnalytics = async (slug: string, decodedToken: JwtPayload) => {
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
+
+    const hostInfo = await getEventHost(decodedToken.userId, event.id);
+    if (!hostInfo) throw new AppError(status.FORBIDDEN, "Only hosts can view analytics");
+
+    const [participantGroups, checkedInCount, paymentGroups] = await Promise.all([
+        prisma.eventParticipant.groupBy({
+            by: ["joinStatus"],
+            where: { eventId: event.id },
+            _count: { id: true }
+        }),
+        prisma.eventParticipant.count({
+            where: { eventId: event.id, joinStatus: JoinStatus.APPROVED, checkedIn: true }
+        }),
+        prisma.payment.groupBy({
+            by: ["paymentStatus"],
+            where: { eventId: event.id },
+            _sum: { amount: true }
+        })
+    ]);
+
+    const byStatus = Object.fromEntries(
+        participantGroups.map(g => [g.joinStatus.toLowerCase(), g._count.id])
+    );
+
+    const approved = byStatus["approved"] ?? 0;
+    const fillRate = event.maxParticipants > 0 ? parseFloat((approved / event.maxParticipants).toFixed(2)) : 0;
+
+    const revenueByStatus = Object.fromEntries(
+        paymentGroups.map(g => [g.paymentStatus.toLowerCase(), g._sum.amount ?? 0])
+    );
+
+    return {
+        views: event.viewCount,
+        participants: {
+            total: participantGroups.reduce((sum, g) => sum + g._count.id, 0),
+            approved,
+            pending: byStatus["pending"] ?? 0,
+            rejected: byStatus["rejected"] ?? 0,
+            cancelled: byStatus["cancelled"] ?? 0,
+            waitlisted: byStatus["waitlisted"] ?? 0
+        },
+        capacity: {
+            max: event.maxParticipants,
+            filled: approved,
+            fillRate
+        },
+        revenue: {
+            collected: revenueByStatus["paid"] ?? 0,
+            pending: revenueByStatus["pending"] ?? 0,
+            refunded: revenueByStatus["refunded"] ?? 0
+        },
+        checkin: {
+            checkedIn: checkedInCount,
+            absent: approved - checkedInCount,
+            attendanceRate: approved > 0 ? parseFloat((checkedInCount / approved).toFixed(2)) : 0
+        }
+    };
+};
+
+const adminCancelEvent = async (eventId: string) => {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new AppError(status.NOT_FOUND, "Event not found");
+    if (event.status === EventStatus.CANCELLED) throw new AppError(status.BAD_REQUEST, "Event is already cancelled");
+
+    await prisma.event.update({ where: { id: eventId }, data: { status: EventStatus.CANCELLED } });
+
+    // Notify all approved participants
+    const participants = await prisma.eventParticipant.findMany({
+        where: { eventId, joinStatus: JoinStatus.APPROVED },
+        select: { userId: true }
+    });
+
+    participants.forEach(({ userId }) => {
+        notify({ userId, type: NotificationType.EVENT_CANCELLED, title: "Event cancelled", message: `"${event.title}" has been cancelled by the platform.`, emailHtml: buildEventCancelledEmail(event.title) });
+    });
+};
+
 export const EventsService = {
     createEvent,
     getAllEvents,
     getEventBySlug,
     updateEvent,
     deleteEvent,
-    getAllEventsCategory
+    getAllEventsCategory,
+    getEventAnalytics,
+    adminCancelEvent
 }

@@ -1,0 +1,72 @@
+// ========================================
+// ENUMS - All Enumeration Types
+// ========================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  HOST
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EventStatus {
+  OPEN
+  FULL
+  CANCELLED
+  COMPLETED
+}
+
+enum JoinStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WAITLISTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REJECTED
+  FAILED
+  REFUNDED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum NotificationType {
+  EVENT_REMINDER
+  PARTICIPANT_APPROVED
+  PARTICIPANT_REJECTED
+  PARTICIPANT_WAITLISTED
+  WAITLIST_PROMOTED
+  EVENT_CANCELLED
+}
+
+enum ReportType {
+  EVENT
+  RATING
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
