@@ -3,6 +3,7 @@ import app from './app'
 import { prisma } from './lib/prisma';
 import { seedSuperAdmin } from './app/utils/seedSuperAdmin';
 import { startEventReminderJob } from './app/jobs/eventReminder.job';
+import { startEventStartingSoonJob } from './app/jobs/eventStartingSoon.job';
 
 
 let server: Server;
@@ -31,6 +32,7 @@ const startServer = async () => {
     await startServer();
     await seedSuperAdmin();
     startEventReminderJob();
+    startEventStartingSoonJob();
 })()
 
 // Unhandled Promise Rejection

@@ -140,6 +140,28 @@ export const buildEventReminderEmail = (eventTitle: string, date: string, locati
     `
   });
 
+export const buildEventStartingSoonEmail = (
+  eventTitle: string,
+  time: string,
+  location: string
+) =>
+  baseTemplate({
+    accentColor: "#ea580c",
+    icon: "⏰",
+    heading: "Starting in about an hour",
+    body: `
+      ${eventBadge(eventTitle)}
+      ${p(`<strong>${eventTitle}</strong> starts at <strong>${time}</strong> — time to head over.`)}
+      <table cellpadding="0" cellspacing="0" style="background:#f3f4f6;border-radius:8px;padding:16px 20px;margin-bottom:16px;width:100%">
+        <tr><td style="font-size:13px;color:#6b7280;padding-bottom:6px">&#9200; STARTS AT</td></tr>
+        <tr><td style="font-size:15px;color:#111827;font-weight:600">${time}</td></tr>
+        <tr><td style="font-size:13px;color:#6b7280;padding:12px 0 6px">&#128205; LOCATION</td></tr>
+        <tr><td style="font-size:15px;color:#111827;font-weight:600">${location}</td></tr>
+      </table>
+      ${p("Have your check-in QR code ready when you arrive.")}
+    `
+  });
+
 export const buildInvitationEmail = (params: {
   eventTitle: string;
   hostName: string;

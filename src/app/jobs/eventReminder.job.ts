@@ -3,24 +3,36 @@ import { prisma } from "../../lib/prisma";
 import { JoinStatus, NotificationType } from "../../generated/prisma/client";
 import { notify } from "../modules/notification/notification.service";
 import { buildEventReminderEmail } from "../utils/emailTemplates";
+import { resolveEventStart } from "../utils/eventStart";
 
 const sendEventReminders = async () => {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const oneDayMs = 24 * 60 * 60 * 1000;
 
-  const participants = await prisma.eventParticipant.findMany({
+  const candidates = await prisma.eventParticipant.findMany({
     where: {
       reminderSent: false,
       joinStatus: JoinStatus.APPROVED,
+      // `date` is midnight UTC, so it can't express "within 24h" on its own.
+      // Scan a day either side and narrow by the real start time below.
       event: {
-        date: { gte: now, lte: in24h }
+        date: {
+          gte: new Date(now.getTime() - oneDayMs),
+          lte: new Date(now.getTime() + 2 * oneDayMs)
+        }
       }
     },
     select: {
       id: true,
       userId: true,
-      event: { select: { title: true, date: true, location: true } }
+      event: { select: { title: true, date: true, time: true, location: true } }
     }
+  });
+
+  const participants = candidates.filter(({ event }) => {
+    const start = resolveEventStart(event.date, event.time);
+    return start !== null && start > now && start <= in24h;
   });
 
   if (participants.length === 0) return;

@@ -16,6 +16,12 @@ interface EnvConfig {
         FROM?: string
     },
     BCRYPT_SALT_ROUND: string,
+    /**
+     * Minutes to add to UTC to get the wall clock that `Event.time` is written
+     * in. Events carry no timezone of their own, so one app-wide offset is the
+     * best we can do; defaults to +06:00 (Asia/Dhaka).
+     */
+    EVENT_TIME_OFFSET_MINUTES: number,
     SUPER_ADMIN_NAME: string,
     SUPER_ADMIN_EMAIL: string,
     SUPER_ADMIN_PASSWORD: string,
@@ -93,6 +99,13 @@ const loadEnvVariable = (): EnvConfig => {
             FROM: process.env.SMTP_FROM
         },
         BCRYPT_SALT_ROUND: process.env.BCRYPT_SALT_ROUND!,
+        // Optional: deployments outside Asia/Dhaka override it, everyone else
+        // gets the default rather than a startup failure.
+        EVENT_TIME_OFFSET_MINUTES: Number.isFinite(
+            Number(process.env.EVENT_TIME_OFFSET_MINUTES)
+        )
+            ? Number(process.env.EVENT_TIME_OFFSET_MINUTES)
+            : 360,
         SUPER_ADMIN_NAME: process.env.SUPER_ADMIN_NAME!,
         SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL!,
         SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD!,

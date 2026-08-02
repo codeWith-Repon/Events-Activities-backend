@@ -79,7 +79,9 @@ const createEvent = async (payload: Event, decodedToken: JwtPayload) => {
 
 const getAllEvents = async (filters: any, options: IOptions) => {
     const { page, limit, skip, sortBy, sortOrder } = PaginationHelpers.calculatePagination(options)
-    const { searchTerm, ...filterData } = filters
+    // location and date need partial / range matching, so they are pulled out
+    // before the exact-equals loop below.
+    const { searchTerm, location, date, ...filterData } = filters
 
     const andConditions: Prisma.EventWhereInput[] = []
 
@@ -92,6 +94,32 @@ const getAllEvents = async (filters: any, options: IOptions) => {
                 }
             }))
         })
+    }
+
+    // "Dhaka" should find "Dhanmondi, Dhaka" — free text, not an exact value.
+    if (location) {
+        andConditions.push({
+            location: {
+                contains: location,
+                mode: "insensitive"
+            }
+        })
+    }
+
+    // A single calendar day. `date` is stored at midnight UTC, but match the
+    // whole day so a row carrying a time component still lands in range.
+    if (date) {
+        const dayStart = new Date(`${date}T00:00:00.000Z`)
+
+        if (!isNaN(dayStart.getTime())) {
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+            andConditions.push({
+                date: {
+                    gte: dayStart,
+                    lt: dayEnd
+                }
+            })
+        }
     }
 
     if (Object.keys(filterData).length > 0) {
