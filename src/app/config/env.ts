@@ -49,6 +49,44 @@ interface EnvConfig {
     }
 }
 
+/** UTC-14:00 … UTC+14:00 — the widest range any real zone uses. */
+const MIN_OFFSET_MINUTES = -14 * 60
+const MAX_OFFSET_MINUTES = 14 * 60
+const DEFAULT_OFFSET_MINUTES = 360 // +06:00, Asia/Dhaka
+
+/**
+ * Optional, so a deployment that never sets it still boots. Anything we can't
+ * use falls back to the default *loudly* — a silent wrong offset would shift
+ * every event reminder by hours with nothing in the logs to explain it.
+ *
+ * Note the empty-string case: `Number("")` is 0, which is a perfectly valid
+ * offset (UTC), so a blank `EVENT_TIME_OFFSET_MINUTES=` would otherwise be
+ * indistinguishable from someone deliberately choosing UTC.
+ */
+const resolveEventTimeOffset = (): number => {
+    const raw = process.env.EVENT_TIME_OFFSET_MINUTES?.trim()
+
+    if (!raw) return DEFAULT_OFFSET_MINUTES
+
+    const parsed = Number(raw)
+
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        console.warn(
+            `⚠️  EVENT_TIME_OFFSET_MINUTES="${raw}" is not a whole number — using ${DEFAULT_OFFSET_MINUTES} (UTC+06:00).`
+        )
+        return DEFAULT_OFFSET_MINUTES
+    }
+
+    if (parsed < MIN_OFFSET_MINUTES || parsed > MAX_OFFSET_MINUTES) {
+        console.warn(
+            `⚠️  EVENT_TIME_OFFSET_MINUTES=${parsed} is outside ±14h — using ${DEFAULT_OFFSET_MINUTES} (UTC+06:00).`
+        )
+        return DEFAULT_OFFSET_MINUTES
+    }
+
+    return parsed
+}
+
 const loadEnvVariable = (): EnvConfig => {
     const requiredEnvVariables: string[] = [
         "PORT",
@@ -99,13 +137,7 @@ const loadEnvVariable = (): EnvConfig => {
             FROM: process.env.SMTP_FROM
         },
         BCRYPT_SALT_ROUND: process.env.BCRYPT_SALT_ROUND!,
-        // Optional: deployments outside Asia/Dhaka override it, everyone else
-        // gets the default rather than a startup failure.
-        EVENT_TIME_OFFSET_MINUTES: Number.isFinite(
-            Number(process.env.EVENT_TIME_OFFSET_MINUTES)
-        )
-            ? Number(process.env.EVENT_TIME_OFFSET_MINUTES)
-            : 360,
+        EVENT_TIME_OFFSET_MINUTES: resolveEventTimeOffset(),
         SUPER_ADMIN_NAME: process.env.SUPER_ADMIN_NAME!,
         SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL!,
         SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD!,
